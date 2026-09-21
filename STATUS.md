@@ -440,6 +440,51 @@ twice, independently, is itself worth noting: it suggests this is an
 easy trap in "topology-aware feature" engineering generally, not a
 one-off slip in one script.
 
+## 5.5. A literature-positioning claim was checked directly and didn't hold up as stated
+
+The paper's Related Work section originally claimed that topology-aware
+GNN papers for power systems "generally" don't compare against a
+same-information, non-topological ablation — i.e., that this project's
+own §2.5/§5 correction was catching a gap the field also has. Asked
+directly to verify this against the actual nearest 10-15 papers before
+submission, rather than leave it as an assumption.
+
+**What checking directly (full text, not abstracts) actually found**:
+the three closest papers ([RELATED_WORK.md](RELATED_WORK.md) entries
+25-27) split two ways, not one. [arXiv:2506.03493](https://arxiv.org/abs/2506.03493)
+(entry 25) and an earlier, closely related study by an overlapping
+author group, [arXiv:2212.04592](https://arxiv.org/pdf/2212.04592)
+(new entry 57, found while checking this) **both** compare their GNN
+against a "regular DNN" baseline that receives the identical PMU-derived
+node feature matrix and differs only in not receiving the adjacency
+matrix — a clean, correctly-scoped, same-information ablation, read
+directly from each paper's own Table II. That is exactly the kind of
+check this project's own original (buggy) comparison lacked, done
+correctly, in a real published paper. [arXiv:2503.22721](https://arxiv.org/pdf/2503.22721)
+(entry 26) is genuinely ambiguous on the text available (a "fully
+connected NN" baseline whose exact input features aren't confirmed
+identical). [arXiv:2603.23357](https://arxiv.org/pdf/2603.23357)
+(entry 27) couldn't be fetched at full-text level at all (HTML 404,
+PDF returned as unreadable binary).
+
+**Conclusion**: the original "the field generally doesn't do this"
+claim does not survive contact with the 3 closest actual papers —
+2 of 3 checkable ones clearly *do* perform this kind of ablation. This
+is the same lesson `RELATED_WORK.md`'s own honesty caveat already
+established for quantitative numbers (two invented figures caught
+there previously), now applied to a qualitative claim: it's just as
+easy to overclaim "nobody checks this" as to invent a statistic, and
+just as checkable. **Fixed** in `paper/main.tex` §II: the claim is now
+narrower and defensible — same-architecture ablations (GNN vs. DNN,
+same features) are a known, sometimes-used check in this literature;
+what this project additionally found is a *different*, lower-level
+failure mode (a feature-*definition* bug that silently breaks an
+intended non-topological baseline before any model ever sees it,
+undetectable by an architecture-level ablation alone) plus a cheap,
+complementary pre-check for it (the out-of-fold linear-redundancy test
+already in §2.5). Source count updated throughout (40/56 → 41/57,
+reflecting the one genuinely new, deeply-read source this pass added).
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,

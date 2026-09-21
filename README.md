@@ -96,7 +96,7 @@ exploration/            Phases 2A-2P (01..20_*.py): microgrid model,
 STATUS.md              Research log -- what was done, in what order,
                        every real number, every correction made along
                        the way. Start here.
-RELATED_WORK.md         56 sources found; 40 read past search-summary
+RELATED_WORK.md         57 sources found; 41 read past search-summary
                        level, with two invented figures caught and
                        corrected in the process. See its own honesty
                        caveat before citing anything from it unstarred.
@@ -188,7 +188,7 @@ paper. `PAPER_DRAFT.md`'s own end-of-file checklist and `STATUS.md`'s
 "Limitations" and "Next" sections are the accurate, current picture;
 the short version:
 
-- Bibliography: 40/56 sources verified in depth; a handful of
+- Bibliography: 41/57 sources verified in depth; a handful of
   IEEE Xplore/ACM-hosted sources couldn't be fetched at all (paywall)
   and need institutional access.
 - Scale: the IEEE 14-bus study (`28_ieee14_scale_replication.py`) is
