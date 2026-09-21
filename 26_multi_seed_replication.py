@@ -44,17 +44,27 @@ def extract_headline(seed):
     loc = pd.read_csv(RESULTS / "phase2s_hard_attack_localization_metrics.csv")
 
     topo_det = det[det["feature_set"] == "topology_fusion"]["balanced_accuracy"].max()
+    rpp_det = det[det["feature_set"] == "residual_plus_prior"]["balanced_accuracy"].max()
     prior_det = det[det["feature_set"] == "prior_only"]["balanced_accuracy"].max()
     topo_loc = loc[loc["feature_set"] == "topology_fusion"]["top1_accuracy"].max()
+    rpp_loc = loc[loc["feature_set"] == "residual_plus_prior"]["top1_accuracy"].max()
     prior_loc = loc[loc["feature_set"] == "prior_only"]["top1_accuracy"].max()
 
     return {
         "seed": seed,
         "topology_fusion_best_detection_balacc": topo_det,
+        "residual_plus_prior_best_detection_balacc": rpp_det,
         "prior_only_best_detection_balacc": prior_det,
+        # positive = topology_fusion ahead of the no-topology
+        # residual+prior ablation; this is the gap that actually
+        # isolates topology's own contribution (the old "detection_gap"
+        # below, vs. prior_only alone, does not -- see STATUS.md).
+        "topology_vs_residual_plus_prior_detection_gap": topo_det - rpp_det,
         "detection_gap": topo_det - prior_det,
         "topology_fusion_best_localization_top1": topo_loc,
+        "residual_plus_prior_best_localization_top1": rpp_loc,
         "prior_only_best_localization_top1": prior_loc,
+        "topology_vs_residual_plus_prior_localization_gap": topo_loc - rpp_loc,
         "localization_gap": topo_loc - prior_loc,
     }
 
@@ -68,8 +78,9 @@ def main():
         run([sys.executable, "23_topology_aware_cyber_physical_localization_HARD.py"])
         row = extract_headline(seed)
         rows.append(row)
-        print(f"  detection gap={row['detection_gap']:.4f} | "
-              f"localization gap={row['localization_gap']:.4f}")
+        print(f"  topology vs residual+prior: "
+              f"detection gap={row['topology_vs_residual_plus_prior_detection_gap']:+.4f} | "
+              f"localization gap={row['topology_vs_residual_plus_prior_localization_gap']:+.4f}")
 
     df = pd.DataFrame(rows)
     print("\n=== ALL SEEDS ===")

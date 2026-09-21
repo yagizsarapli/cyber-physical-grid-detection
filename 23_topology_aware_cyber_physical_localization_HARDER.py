@@ -369,6 +369,28 @@ def feature_columns(graph_df):
         and not c.startswith("label_")
     ]
 
+    # Explicit topology-relational columns (neighbor/incident-edge
+    # comparisons) are named e.g. "b0_neighbor_mean_residual" or
+    # "b0_incident_edge_max_innovation" -- they contain the substrings
+    # "residual"/"innovation" like the plain per-bus features do, so
+    # they must be excluded here by name, or they silently leak into
+    # residual_only/prior_only and those stop being topology-free
+    # baselines. (Caught empirically: before this exclusion, all 65
+    # relational columns in topology_fusion were double-counted this
+    # way -- 30 into residual_only, 35 into prior_only -- so that
+    # residual_only | prior_only == topology_fusion exactly, i.e.
+    # topology_fusion added no information beyond the two "baselines"
+    # combined.)
+    relational_markers = (
+        "neighbor_",
+        "incident_edge_",
+        "local_minus_",
+        "local_over_",
+    )
+
+    def is_relational(c):
+        return any(mk in c for mk in relational_markers)
+
     residual_only = [
         c for c in all_features
         if (
@@ -380,6 +402,7 @@ def feature_columns(graph_df):
             or c.endswith("_res_max")
         )
         and "innovation" not in c
+        and not is_relational(c)
     ]
 
     prior_only = [
@@ -396,6 +419,7 @@ def feature_columns(graph_df):
             or c in {"pv_bus_inv", "bess_bus_inv"}
         )
         and "residual" not in c
+        and not is_relational(c)
     ]
 
     topology_fusion = all_features
@@ -403,6 +427,7 @@ def feature_columns(graph_df):
     return {
         "residual_only": sorted(set(residual_only)),
         "prior_only": sorted(set(prior_only)),
+        "residual_plus_prior": sorted(set(residual_only) | set(prior_only)),
         "topology_fusion": sorted(set(topology_fusion)),
     }
 
@@ -770,6 +795,7 @@ def node_feature_sets(node):
     return {
         "residual_only": residual,
         "prior_only": prior,
+        "residual_plus_prior": sorted(set(residual) | set(prior)),
         "topology_fusion": topology,
     }
 

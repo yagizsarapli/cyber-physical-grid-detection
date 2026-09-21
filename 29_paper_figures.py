@@ -69,9 +69,22 @@ def bar_labels(ax, bars, fmt="{:.3f}", dy=0.012, color=INK):
 
 
 # ============================================================
-# Figure 1 -- §4 headline: multi-seed detection + localization
+# Figure 1 -- §4 headline: multi-seed detection + localization.
+# topology_fusion vs. the no-topology residual_plus_prior ablation
+# (the fair comparison -- feature_columns() originally let
+# topology-relational columns leak into residual_only/prior_only by
+# name-substring collision; residual_plus_prior is the corrected,
+# genuinely topology-free union of the two). prior_only alone is kept
+# for scale: it shows how much of the old "topology" gain was really
+# just prior_only missing residual information it already had access to.
 # ============================================================
 seeds = pd.read_csv(RESULTS / "phase2u_multiseed_replication.csv")
+
+series = [
+    ("topology_fusion", "topology_fusion", BLUE),
+    ("residual_plus_prior", "residual+prior\n(no topology)", AQUA),
+    ("prior_only", "prior_only", ORANGE),
+]
 
 fig, axes = plt.subplots(1, 2, figsize=(9, 4.2))
 
@@ -79,29 +92,27 @@ for ax, metric, title in [
     (axes[0], "detection_balacc", "Detection (balanced accuracy)"),
     (axes[1], "localization_top1", "Localization (top-1 accuracy)"),
 ]:
-    topo = seeds[f"topology_fusion_best_{metric}"]
-    prior = seeds[f"prior_only_best_{metric}"]
-    means = [topo.mean(), prior.mean()]
-    stds = [topo.std(), prior.std()]
-    x = np.arange(2)
-    bars = ax.bar(x, means, yerr=stds, capsize=5, width=0.55,
-                   color=[BLUE, ORANGE], zorder=3,
+    means = [seeds[f"{key}_best_{metric}"].mean() for key, _, _ in series]
+    stds = [seeds[f"{key}_best_{metric}"].std() for key, _, _ in series]
+    x = np.arange(len(series))
+    colors = [c for _, _, c in series]
+    bars = ax.bar(x, means, yerr=stds, capsize=5, width=0.6,
+                   color=colors, zorder=3,
                    error_kw={"ecolor": INK_SECONDARY, "elinewidth": 1.3})
-    # overlay individual seeds as points
-    for i, col in enumerate([f"topology_fusion_best_{metric}", f"prior_only_best_{metric}"]):
-        jitter = np.linspace(-0.10, 0.10, len(seeds))
-        ax.scatter(np.full(len(seeds), i) + jitter, seeds[col],
+    for i, (key, _, _) in enumerate(series):
+        jitter = np.linspace(-0.09, 0.09, len(seeds))
+        ax.scatter(np.full(len(seeds), i) + jitter, seeds[f"{key}_best_{metric}"],
                     color=INK, s=14, zorder=4, alpha=0.55)
     ax.set_xticks(x)
-    ax.set_xticklabels(["topology_fusion", "prior_only"])
-    ax.set_ylim(0, 1.08)
+    ax.set_xticklabels([lbl for _, lbl, _ in series], fontsize=9)
+    ax.set_ylim(0, 1.12)
     ax.set_title(title, fontsize=11, color=INK, pad=10)
     bar_labels(ax, bars, dy=0.05)
     style_axes(ax)
 
-fig.suptitle("Detection and localization advantage, 4 independent seeds (5-bus, hard attack magnitude)",
-             fontsize=11.5, color=INK, y=1.02)
-fig.text(0.5, -0.02, "Bars: mean ± std across seeds. Dots: individual seed results. n=300 test scenarios/seed.",
+fig.suptitle("Residual+prior fusion matches topology_fusion; both beat prior_only alone (4 seeds, 5-bus)",
+             fontsize=11, color=INK, y=1.03)
+fig.text(0.5, -0.02, "Bars: mean ± std across 4 seeds. Dots: individual seed results. n=300 test scenarios/seed.",
           ha="center", fontsize=8.5, color=INK_MUTED)
 fig.tight_layout()
 fig.savefig(FIGURES / "paper_fig1_multiseed_advantage.png", dpi=200, bbox_inches="tight")
@@ -182,8 +193,14 @@ plt.close(fig)
 # ============================================================
 # Figure 4 -- §7 scale comparison, 5-bus vs IEEE 14-bus
 # ============================================================
-det5 = {"topology_fusion": 0.970, "prior_only": 0.837, "residual_only": 0.713}
-loc5 = {"topology_fusion": 1.000, "prior_only": 0.747, "residual_only": 0.780}
+# Read the 5-bus side from the same (corrected, primary-seed) HARD
+# results Table II/the main text use, instead of a hardcoded snapshot
+# -- the previous hardcoded values were from seed=2024, inconsistent
+# with the seed=20260812 numbers quoted in the main text and Table II.
+det5_df = pd.read_csv(RESULTS / "phase2s_hard_cyber_detection_metrics.csv")
+det5 = det5_df.groupby("feature_set")["balanced_accuracy"].max().to_dict()
+loc5_df = pd.read_csv(RESULTS / "phase2s_hard_attack_localization_metrics.csv")
+loc5 = loc5_df.groupby("feature_set")["top1_accuracy"].max().to_dict()
 
 det14 = pd.read_csv(RESULTS / "phase2v_ieee14_detection_metrics.csv")
 det14_best = det14.groupby("feature_set")["balanced_accuracy"].max().to_dict()
@@ -214,8 +231,8 @@ for ax, d5, d14, title in [
     style_axes(ax)
 
 axes[0].legend(frameon=False, loc="upper center", bbox_to_anchor=(1.05, 1.22), ncol=3, fontsize=9.5)
-fig.suptitle("The topology-fusion advantage does not transfer to a bigger, meshed network (n=300, confirmed)",
-             fontsize=11.5, color=INK, y=1.04)
+fig.suptitle("topology_fusion's edge over prior_only, at either scale, is a residual+prior effect, not topology (n=300, confirmed)",
+             fontsize=10.5, color=INK, y=1.04)
 fig.tight_layout()
 fig.savefig(FIGURES / "paper_fig4_scale_comparison.png", dpi=200, bbox_inches="tight")
 plt.close(fig)

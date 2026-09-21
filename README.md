@@ -4,39 +4,55 @@ Does giving a cyber-attack detector *topology* -- not just raw sensor
 residuals, but how each meter's reading compares to its electrical
 neighbors -- actually help it (a) tell a cyberattack apart from a
 normal physical disturbance, (b) find where the attack is, and (c) do
-both fast enough for a protective relay to act on? And does any of
-that hold up at a bigger, more realistic network scale?
+both fast enough for a protective relay to act on?
 
-Short answer: yes, no, and it's complicated -- in that order, with
-real numbers behind each part. See below for what that means and
-where to find the details.
+Short answer: **no** -- once measured against a fair comparison, not
+the one we first ran. See below for what that means, how we caught
+our own mistake, and where to find the details.
 
 ![5-bus vs. IEEE 14-bus: detection and localization by feature set](figures/paper_fig4_scale_comparison.png)
 
 ## The headline result
 
-On a small 5-bus inverter-dominated microgrid, topology-aware features
-(`topology_fusion`) beat a simpler prior-based baseline (`prior_only`)
+We built topology-relational features (comparing each meter's reading
+to its electrical neighbors) expecting them to help. A first pass
+seemed to confirm it: on a small 5-bus inverter-dominated microgrid,
+`topology_fusion` beat a simpler prior-based baseline (`prior_only`)
 at both detecting a stealthy false-data-injection attack (balanced
 accuracy 0.950 vs. 0.873) and localizing it (top-1 accuracy 0.980 vs.
-0.780) -- validated across 4 independent random seeds, gap never flips
-sign. The full decision pipeline (state estimation -> feature
-computation -> classification) was profiled against a one-cycle
-(20 ms at 50 Hz) protection-relevant computational target: the
-original 43 ms pipeline turned out to be slow because of a fixable
-software inefficiency, not the model or the estimator's math --
-fixing it brought the pipeline to 16.4/17.0/17.1 ms at the
-median/p95/p99.
+0.780) -- validated across 4 independent random seeds, gap never
+flipping sign.
 
-Two things temper that: the detector does **not** generalize to an
-attack type it never trained on (0-4% recall when one of two attack
-families is withheld), and a confirmed, sample-size-matched study at a
-bigger, standard, meshed network (IEEE 14-bus, n=500 replications, 300
-test scenarios) does **not** reproduce the topology advantage -- for
-detection, a simpler residual-only baseline is now the outright best
-(0.750 vs. topology-fusion's own best of 0.737); for localization,
-topology-fusion keeps only a narrow, non-decisive edge. Both are
-reported as real findings, not hidden.
+That comparison turned out to be unfair. `prior_only` alone is
+missing residual information `topology_fusion` has always had; the
+actual control is `residual_plus_prior` -- residual and prior features
+combined, with **no** topology at all. Building that ablation surfaced
+a real bug: topology-relational columns are *named* after the
+residual/innovation quantities they compare (e.g.
+`neighbor_mean_residual`), so the original name-matching feature-set
+split let about half of them leak into what were meant to be
+topology-free baselines. Once fixed, the fair comparison is a
+near-exact tie for detection (0.950 vs. 0.950) and a **win for the
+topology-free ablation** at localization (0.993 vs. 0.980) -- across
+two independent stress conditions and all 4 seeds. **Combining
+residual and prior information explains the entire advantage; explicit
+topology-awareness adds nothing measurable on this testbed.** This
+also explains why the same `topology_fusion` advantage separately
+failed to reproduce on a bigger, standard, meshed network (IEEE
+14-bus, n=500 replications, 300 test scenarios, built with a
+completely independent feature design): it was never a real topology
+effect to begin with, so it had nothing to transfer.
+
+Two further things, still true and still worth reporting plainly: the
+detector does **not** generalize to an attack type it never trained on
+(0-4% recall when one of two attack families is withheld), and the
+full decision pipeline (state estimation -> feature computation ->
+classification) was profiled against a one-cycle (20 ms at 50 Hz)
+protection-relevant computational target -- the original 43 ms
+pipeline turned out to be slow because of a fixable software
+inefficiency, not the model or the estimator's math, and fixing it
+brought the pipeline to 16.4/17.0/17.1 ms at the median/p95/p99. That
+part of the finding is unaffected by the correction above.
 
 **Full story, with every number and why it's trustworthy: [`STATUS.md`](STATUS.md).**
 
@@ -165,11 +181,12 @@ the short version:
   IEEE Xplore/ACM-hosted sources couldn't be fetched at all (paywall)
   and need institutional access.
 - Scale: the IEEE 14-bus study (`28_ieee14_scale_replication.py`) is
-  now confirmed at n=500 (300 test scenarios), matching the validated
-  5-bus result's own test-set size -- the topology-fusion advantage
-  does **not** transfer at this scale. Only two network topologies
+  confirmed at n=500 (300 test scenarios), matching the corrected
+  5-bus result's own test-set size, and independently confirms it: no
+  measurable topology-relational advantage there either, using an
+  unrelated feature-engineering design. Only two network topologies
   have been tested; a third standard system (e.g. IEEE 30-bus) would
-  show whether that pattern itself generalizes.
+  show whether this null result itself generalizes further.
 - No target venue has formally accepted anything -- `paper/main.tex`
   is formatted for IEEE SmartGridComm as the best topical fit found,
   not a submission in progress.

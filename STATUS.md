@@ -6,46 +6,50 @@ never updated through phases 2B–2T.
 
 ## Summary
 
-A 5-bus/0.4kV synthetic microgrid (PV as a GFL inverter, BESS as a
-GFM inverter) with a WLS AC state estimator is used to test whether
-topology-aware relational features let a classifier (a) tell a cyber
-false-data-injection attack apart from a legitimate physical
-disturbance, (b) localize which bus is affected, and (c) do both
-within a one-cycle protection-relevant computational target (50 Hz =
-20 ms, confirmed from `net.f_hz`, not assumed -- not a claim that
-every protective relaying function requires exactly this latency).
+**Headline finding, corrected 2026-09-21 (see §2.5): topology-aware
+relational features do not measurably help.** A 5-bus/0.4kV synthetic
+microgrid (PV as a GFL inverter, BESS as a GFM inverter) with a WLS AC
+state estimator was used to test whether topology-aware relational
+features let a classifier (a) tell a cyber false-data-injection attack
+apart from a legitimate physical disturbance, (b) localize which bus
+is affected, and (c) do both within a one-cycle protection-relevant
+computational target (50 Hz = 20 ms, confirmed from `net.f_hz`, not
+assumed). The original answer to (a)/(b) — yes, confirmed across 4
+seeds — was real but built on an incomplete comparison. §2 below is
+kept as the accurate history of how that result was reached and
+validated; §2.5 explains the ablation that overturned it: once
+`topology_fusion` is compared against a genuinely topology-free
+`residual_plus_prior` set (rather than against `residual_only` or
+`prior_only` individually), the two are statistically indistinguishable
+for detection and `residual_plus_prior` is actually **ahead** for
+localization — across both stress conditions and all 4 seeds. The gain
+over `prior_only` alone is real and large; it was never a topology
+effect.
 
-Under a realistic attack magnitude (pushed toward the sensor noise
-floor, not the original easy configuration) **and** with a large
-enough test set (n=300, not n=72), topology-fusion features give a
-real, statistically supported advantage for both detection
-(balanced accuracy 0.950–0.953) and localization (top-1 0.980) over
-a simpler prior-based baseline (0.83–0.90 detection, 0.75–0.78
-localization) — stable whether load-forecast uncertainty is normal or
-doubled, and **confirmed across 4 independent random seeds** (detection
-gap +0.088 ± 0.035, localization gap +0.207 ± 0.032, sign never
-flips). After profiling and fixing the actual latency bottleneck (a
-software inefficiency, not the model), the full pipeline now meets the
-20ms budget at the median, p95, and p99 (16.4 / 17.0 / 17.1 ms), with
-a single outlier over 300 trials still exceeding it (21.3 ms max).
+After profiling and fixing the actual latency bottleneck (a software
+inefficiency, not the model), the full pipeline meets the 20ms budget
+at the median, p95, and p99 (16.4 / 17.0 / 17.1 ms), with a single
+outlier over 300 trials still exceeding it (21.3 ms max) — this part
+of the finding is unaffected by the §2.5 correction.
 
 Tested at a bigger, standard scale (IEEE 14-bus, §5) at three
 escalating sample sizes, ending at n=500 — matching the 5-bus study's
-own 300-scenario test-set size exactly: the advantage does **not** transfer.
-Residual-only detection (0.750) outright beats topology-fusion (0.737)
-there; topology-fusion keeps only a narrow, non-decisive localization
-edge (0.560 vs. 0.507-0.547). This is a confirmed, sample-size-matched
-result, not a pilot with an asterisk — the honest scope of the claim
-is now "helps on small, simple networks; does not help, and for
-detection actively underperforms a simpler baseline, on larger meshed
-ones."
+own 300-scenario test-set size exactly, and built with a completely
+independent, size-agnostic feature design (never touched by the §2.5
+bug): topology-fusion shows no advantage there either. Residual-only
+detection (0.750) outright beats topology-fusion (0.737); topology-fusion
+keeps only a narrow, non-decisive localization edge (0.560 vs.
+0.507-0.547). Read together with §2.5, this is not "the advantage
+doesn't transfer to scale" — it's the same null result, reached
+independently twice, with two unrelated implementations, at two
+network sizes.
 
-One honest limit found by testing it directly: this advantage is
-**pattern recognition of known attack types, not zero-day
-generalization**. A model trained with one cyber attack type entirely
-withheld catches almost none of it at test time (0–4% recall, vs.
-89–100% when that type is in training). Framed accurately, not
-overclaimed — see §4.
+One honest limit found by testing it directly: this advantage
+(residual+prior fusion, not topology) is **pattern recognition of
+known attack types, not zero-day generalization**. A model trained
+with one cyber attack type entirely withheld catches almost none of it
+at test time (0–4% recall, vs. 89–100% when that type is in training).
+Framed accurately, not overclaimed — see §4.
 
 ## Method
 
@@ -119,15 +123,108 @@ noise, not a real effect:
 topology_fusion/HistGradientBoosting bal-acc **[0.923, 0.977]**,
 non-overlapping with prior_only/LogisticRegression **[0.830, 0.897]**.
 
-**Conclusion**: topology-aware relational features give a real,
-statistically supported advantage for both detection and
-localization under realistic (not easy) attack conditions, and that
-advantage is stable when a second, independent difficulty axis
-(forecast uncertainty) is added on top. The n=72 "detection tie"
+**Conclusion (superseded by §2.5 below, kept as accurate history)**:
+this section correctly established that topology_fusion beats
+prior_only alone, is stable under a second stress axis, and is
+statistically supported (non-overlapping CIs) — all still true. What
+this section did *not* establish, because the comparison was never
+run, is whether that gap is a topology-specific effect or simply an
+effect of topology_fusion having strictly more information than
+prior_only alone. §2.5 runs that comparison. The n=72 "detection tie"
 was a genuine research dead-end correctly caught by insisting on a
 harder test — but the fix for a suspicious result should also include
 checking whether the test set was simply too small before trusting a
-reversal, which the first pass here skipped.
+reversal, which the first pass here skipped; §2.5 is the same lesson
+applied to a different kind of gap in the comparison, not the sample
+size.
+
+## 2.5. The topology advantage did not survive its own ablation
+
+**What was missing from §2**: every comparison above is
+`topology_fusion` vs. `residual_only` *or* `prior_only`, one at a
+time. Nothing above compares `topology_fusion` against the
+*combination* of both — the actual topology-free control. Building
+that control (prompted by a request to isolate exactly what topology
+contributes, as a next-step ablation) surfaced a real bug.
+
+**The bug**: `feature_columns()` (`23_..._HARD.py`) defined
+`residual_only`/`prior_only` by matching column-name substrings
+(`"residual"`, `"innovation"`). But the explicit topology-relational
+columns are *named after* the quantities they compare across
+neighbors — e.g. `b0_neighbor_mean_residual`,
+`b0_incident_edge_max_innovation`, `b0_local_minus_neighbor_residual`
+— so the same substring match silently pulled most of them into the
+"baseline" sets. Measured directly: of 65 explicit relational columns
+inside `topology_fusion` (147 columns total), 30 had leaked into
+`residual_only` (64 columns) and 35 into `prior_only` (83 columns).
+`residual_only ∪ prior_only` equaled `topology_fusion` exactly, column
+for column — meaning `topology_fusion` could never have been compared
+against a condition that had all the same non-relational information
+and nothing else, because that condition was never constructed.
+
+**The fix**: exclude columns matching explicit relational markers
+(`neighbor_`, `incident_edge_`, `local_minus_`, `local_over_`) from
+`residual_only`/`prior_only`, and add their corrected union as a new,
+fourth, genuinely topology-free `residual_plus_prior` set. Applied to
+both `23_..._HARD.py` and `23_..._HARDER.py`, and to the localization
+side (`node_feature_sets()`, which used an explicit whitelist rather
+than regex and was *not* buggy in the same way — it just never had a
+"both, no topology" entry either). Verified empirically after the fix:
+zero relational-column leakage into any non-topology set;
+`residual_only`=34, `prior_only`=48, `residual_plus_prior`=82,
+`topology_fusion`=147 (unchanged), with `topology_fusion −
+residual_plus_prior` exactly equal to the 65 relational columns.
+
+**Corrected result** (best model per cell, $n$=300 test):
+
+| | Detection (bal-acc) | Localization (top-1) |
+|---|---|---|
+| Hard: topology_fusion | 0.950 | 0.980 |
+| Hard: **residual_plus_prior** | 0.950 | **0.993** |
+| Harder (+2x noise): topology_fusion | 0.953 | 0.980 |
+| Harder (+2x noise): **residual_plus_prior** | 0.953 | **0.993** |
+
+Detection is an exact tie in both conditions. Localization: the
+topology-free ablation is *ahead* of topology_fusion, not behind it.
+Both still comfortably beat prior_only alone (0.853–0.867 detection,
+0.767–0.780 localization) and residual_only alone (0.687–0.690
+detection, 0.700 localization) — the gain over either single baseline
+is real; it was never a topology effect.
+
+**Confirmed across all 4 seeds** (re-running `26_multi_seed_replication.py`
+with the corrected feature sets):
+
+| Seed | topology_fusion det. | residual_plus_prior det. | gap | topology_fusion loc. | residual_plus_prior loc. | gap |
+|---|---|---|---|---|---|---|
+| 20260812 | 0.950 | 0.950 | 0.000 | 0.980 | 0.993 | −0.013 |
+| 42 | 0.943 | 0.957 | −0.013 | 0.973 | 0.973 | 0.000 |
+| 777 | 0.907 | 0.913 | −0.007 | 0.987 | 0.987 | 0.000 |
+| 2024 | 0.970 | 0.960 | +0.010 | 1.000 | 1.000 | 0.000 |
+| **mean ± std** | 0.943±0.026 | 0.945±0.022 | **−0.003±0.010** | 0.985±0.011 | 0.988±0.011 | **−0.003±0.007** |
+
+Both gaps are consistent with zero, and — unlike the original
+`topology_fusion`-vs-`prior_only` gap, whose sign never flipped across
+the same 4 seeds — the corrected gap's sign does not hold a consistent
+direction (2 seeds slightly favor topology_fusion on detection, 2
+slightly favor residual_plus_prior; localization is 3 exact ties and 1
+seed favoring residual_plus_prior). This is the signature of noise
+around zero, not a real, small effect. For reference, the original
+`topology_fusion`-vs-`prior_only` gap recomputed on this same corrected
+run is +0.089±0.037 (detection) / +0.207±0.032 (localization) —
+essentially identical to §2's original numbers, confirming that gap
+was real and reproducible, just entirely attributable to
+`residual_plus_prior` matching `topology_fusion`, not to `prior_only`
+catching up.
+
+**Conclusion**: the corrected, honest finding is that topology-aware
+relational features give no measurable benefit over a fair,
+same-information (`residual_plus_prior`) ablation, on the 5-bus
+network, under either stress condition, across all 4 validated seeds.
+Combining residual and prior-innovation information is what drives the
+real, multi-seed-confirmed gain over either alone — not topology. This
+also resolves what looked, before this fix, like a puzzle: why would a
+real, well-validated 5-bus effect fail to transfer to IEEE 14-bus
+(§5)? It doesn't need to — it was never there to transfer.
 
 ## 3. Real-time latency: found the bottleneck, fixed most of it
 
@@ -256,21 +353,27 @@ comparison:** the n=200 pattern was not a fluke that a bigger sample
 would erase — it got clearer. For detection specifically, plain
 residual analysis is now the single best-performing feature set on
 IEEE 14-bus, ahead of topology_fusion. For localization, topology_fusion
-keeps a narrow edge, but nothing resembling the decisive 5-bus gap
-(0.560 vs. 0.980). This is no longer a pilot with an asterisk — it's a
-direct, sample-size-matched comparison, and the answer is: **the
-topology-fusion advantage does not transfer to IEEE 14-bus.**
+keeps a narrow edge, but nothing resembling the decisive 5-bus gap it
+was originally credited with (0.560 vs. 0.980) — and §2.5 has since
+shown that decisive-looking 5-bus gap was itself not a topology effect
+once measured against a fair ablation.
 
-**Honest reading: the advantage looks scale/topology-dependent, not
-universal.** IEEE 14-bus is meshed, multi-generator, with transformers
-— a node's electrical "neighbors" there are a much less tight, less
-informative concept than on the simple, small, mostly-radial 5-bus
-microgrid where the original advantage was found. This is a genuinely
-useful, publishable nuance — arguably more interesting than a clean
-replication would have been, because it scopes the claim honestly:
-*topology-aware fusion helps on small, simple networks; it does not
-help, and for detection specifically actively underperforms a simpler
-baseline, on this larger meshed one.*
+**Honest reading, updated after §2.5: this is not a scale-dependence
+finding, it's the same null result found twice.** The original
+"honest reading" here concluded the topology advantage looked
+scale/topology-dependent — real at 5-bus, gone at 14-bus, because a
+meshed network's electrical "neighbors" are a less tight, less
+informative concept than on a small radial one. That is no longer the
+right explanation. §2.5 shows the 5-bus advantage itself does not
+survive comparison against a genuinely topology-free ablation
+(`residual_plus_prior`); it was never there to fail to transfer. What
+this section actually shows, read correctly, is a **second,
+independent confirmation of the same null result**, using a
+completely different feature-engineering implementation (size-agnostic
+global summaries here, vs. fixed per-bus regex-derived columns at
+5-bus) that was never touched by the §2.5 bug. Two independently-built
+pipelines agreeing that explicit topology-relational features add no
+measurable value is stronger evidence than either alone.
 
 ## Positioning against related work
 
@@ -309,20 +412,19 @@ line of work in the smart-grid cybersecurity literature generally.
 
 ## Limitations (explicit, for anyone deciding whether to write this up)
 
-1. **Scale**: the headline advantage (§2) is a 5-bus finding. Confirmed
-   at n=500 on IEEE 14-bus (§5, matching the 5-bus study's own power)
-   that it does **not** transfer — residual-only detection now
-   outright beats topology-fusion there. The honest claim is
-   scope-limited to small/simple networks, not universal. This is no
-   longer an open statistical-power question at all; what remains is
-   whether a *second* standard system (e.g. IEEE 30-bus) shows the
-   same pattern, i.e. whether "doesn't transfer past ~14 buses" itself
-   generalizes — a genuine open question, but a different one from
-   "was n=200 enough," which is now closed.
+1. **No topology-specific advantage was found at either scale tested**
+   (§2.5, §5), using two unrelated feature-engineering implementations.
+   Both are still limited to synthetic networks/loads; a third,
+   real-topology system (e.g. IEEE 30-bus, or a real feeder) would
+   further test whether this null result itself generalizes, but the
+   open question is no longer "does topology help at scale" — it's
+   "does this class of relational feature ever help, on any network,"
+   which the evidence so far says no to, twice.
 2. **No zero-day generalization**: demonstrated directly in §4 — 0–4%
    recall on a completely withheld attack type. The detection/
    localization numbers above only hold for attack types represented
-   in training.
+   in training. This was tested for `topology_fusion` specifically,
+   not independently re-run for `residual_plus_prior`.
 3. **Third stress lever not testable as a free parameter**: restricting
    which measurements a stealth attack compromises is a physical
    consequence of the AC model consistency construction, not a knob —
@@ -332,7 +434,11 @@ line of work in the smart-grid cybersecurity literature generally.
    richer taxonomy lives in an incompatible upstream pipeline (§4) —
    bridging it is future work, not done here.
 5. **Latency benchmark** measures this specific Python/pandapower
-   implementation on one machine — not a hardware/RTOS claim.
+   implementation on one machine — not a hardware/RTOS claim — and was
+   not re-run on the smaller `residual_plus_prior` feature set (§3
+   argues this would not change the conclusion, since state estimation
+   dominates the budget regardless of feature set, but this is an
+   argument, not a re-measurement).
 
 ## New files this session
 
@@ -355,14 +461,18 @@ recur).
 
 1. ~~Push `28_ieee14_scale_replication.py` to n_rep≈500~~ **Done** — §5
    is now confirmed at a matched 300-scenario test-set size, not a
-   pilot (not a formal power analysis — same N, not verified-equal
-   statistical power). What's
-   left on scale: try a second standard system (e.g. IEEE 30-bus) to
-   see whether "topology-fusion loses its edge past ~14 buses" itself
-   generalizes, or is specific to IEEE 14-bus's particular topology.
+   pilot. ~~Build the `residual_plus_prior` ablation and re-check
+   whether the 5-bus topology advantage is real~~ **Done (§2.5)** —
+   it wasn't; corrected across 2 stress conditions and 4 seeds. What's
+   left on scale: try a third standard system (e.g. IEEE 30-bus) to
+   see whether this null result itself generalizes further, or is
+   specific to the two topologies tested so far.
 2. Some form of unseen-attack robustness beyond pure supervised
    classification (e.g. anomaly-based pre-filter, or bridging Phase
    14/17's richer taxonomy) — §4 shows the current approach has none,
    and that's worth addressing rather than only disclosing.
 3. A direct numeric comparison against arXiv:2605.17256's own
    architectures on the same data, if their code/data is available.
+4. Re-run §4's zero-day test on `residual_plus_prior` specifically
+   (currently only verified for `topology_fusion`) — flagged in
+   Limitations item 2, not expected to differ but not yet checked.
