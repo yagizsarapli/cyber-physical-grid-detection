@@ -204,10 +204,26 @@ det5 = det5_df.groupby("feature_set")["balanced_accuracy"].max().to_dict()
 loc5_df = pd.read_csv(RESULTS / "phase2s_hard_attack_localization_metrics.csv")
 loc5 = loc5_df.groupby("feature_set")["top1_accuracy"].max().to_dict()
 
-det14 = pd.read_csv(RESULTS / "phase2v_ieee14_detection_metrics.csv")
-det14_best = det14.groupby("feature_set")["balanced_accuracy"].max().to_dict()
-loc14 = pd.read_csv(RESULTS / "phase2v_ieee14_localization_metrics.csv")
-loc14_best = dict(zip(loc14["feature_set"], loc14["top1_accuracy"]))
+# IEEE-14: use the 4-seed mean (phase2w_..., from
+# 30_ieee14_multi_seed_replication.py), not the single-run
+# phase2v_... file -- that file gets overwritten by the last seed in
+# the multi-seed loop, so it no longer reflects any one intentional
+# run, and Table III/IV in the paper now report 4-seed means for
+# IEEE-14 anyway. Consistent with det5/loc5 above using max() per
+# feature set (best model), mirrored here per feature set across seeds.
+det14w = pd.read_csv(RESULTS / "phase2w_ieee14_multiseed_replication.csv")
+det14_best = {
+    "topology_fusion": det14w["topology_fusion_det"].mean(),
+    "residual_plus_prior": det14w["residual_plus_prior_det"].mean(),
+    "prior_only": det14w["prior_only_det"].mean(),
+    "residual_only": det14w["residual_only_det"].mean(),
+}
+loc14_best = {
+    "topology_fusion": det14w["topology_fusion_loc"].mean(),
+    "residual_plus_prior": det14w["residual_plus_prior_loc"].mean(),
+    "prior_only": det14w["prior_only_loc"].mean(),
+    "residual_only": det14w["residual_only_loc"].mean(),
+}
 
 order = ["topology_fusion", "residual_plus_prior", "prior_only", "residual_only"]
 colors4 = [BLUE, AQUA, ORANGE, INK_SECONDARY]
@@ -227,13 +243,13 @@ for ax, d5, d14, title in [
                        label=feat if ax is axes[0] else None)
         bar_labels(ax, bars, dy=0.02, fmt="{:.2f}")
     ax.set_xticks(x)
-    ax.set_xticklabels(["5-bus\n(n=300 test)", "IEEE 14-bus\n(n=300 test)"])
+    ax.set_xticklabels(["5-bus\n(n=300 test)", "IEEE 14-bus\n(4-seed mean)"])
     ax.set_ylim(0, 1.15)
     ax.set_title(title, fontsize=11, color=INK, pad=10)
     style_axes(ax)
 
 axes[0].legend(frameon=False, loc="upper center", bbox_to_anchor=(1.1, 1.22), ncol=4, fontsize=8.8)
-fig.suptitle("No feature set is consistently ahead of the topology-free ablation at either scale (n=300, confirmed)",
+fig.suptitle("Detection: topology never confidently ahead. Localization: topology-free wins at 5-bus, topology wins at 14-bus",
              fontsize=10.5, color=INK, y=1.04)
 fig.tight_layout()
 fig.savefig(FIGURES / "paper_fig4_scale_comparison.png", dpi=200, bbox_inches="tight")

@@ -37,16 +37,18 @@ escalating sample sizes, ending at n=500 — matching the 5-bus study's
 own 300-scenario test-set size exactly, and built with a completely
 independent, size-agnostic feature design. That design turned out to
 need the *same* correction as §2.5, found independently during this
-audit (§5's own "second instance" writeup) — once fixed,
-topology-fusion shows no advantage there either. Residual-only
-detection (0.750) outright beats topology-fusion (0.737), and even the
-corrected topology-free ablation (residual_plus_prior, 0.743) edges it
-out; topology-fusion keeps only a narrow, single-run (not multi-seed)
-localization edge (0.560 vs. 0.533-0.547). Read together with §2.5,
-this is not "the advantage doesn't transfer to scale" — it's the same
-null result, reached independently twice, with two unrelated
-implementations that each independently needed the same fix, at two
-network sizes.
+audit (§5's own "second instance" writeup). Once fixed and confirmed
+across 4 independent seeds (same discipline as the 5-bus study),
+**detection agrees exactly with 5-bus**: residual-only (0.750) and the
+topology-free ablation (mean 0.750) both edge out topology-fusion
+(mean 0.741), consistently, sign never flipping across seeds.
+**Localization does not agree — a real, 4-seed-confirmed reversal, not
+a second null result**: topology-fusion keeps a small but consistent
+lead (mean gap +0.018, range +0.013 to +0.033, never flipping sign).
+Read together with §2.5, this is not "the same null result twice" —
+it's "detection: the same null result twice; localization: a genuine,
+replicated, scale-dependent reversal" — a more complicated and more
+interesting answer than either a clean yes or a clean no.
 
 One honest limit found by testing it directly: this advantage
 (residual+prior fusion, not topology) is **pattern recognition of
@@ -412,33 +414,58 @@ Fixed identically to §2.5: relational/degree columns excluded from
 (also catches `n_neighbors`), their union added as a fourth
 `residual_plus_prior` set. Re-ran the full n_rep=500 pass with the fix.
 
-**Corrected n=500 result** (best model per feature set):
+**Corrected n=500 result** (best model per feature set, single run):
 
-| | 5-bus (n=300 test) | **IEEE 14-bus, n=500 (corrected)** |
+| | 5-bus (n=300 test) | **IEEE 14-bus, n=500 (corrected, single run)** |
 |---|---|---|
 | Detection | topology_fusion 0.950 = residual_plus_prior 0.950 | residual_only/LR **0.750** best; residual_plus_prior 0.743, topology_fusion 0.737 close behind — neither the ablation nor topology_fusion leads |
-| Localization | residual_plus_prior **0.993** > topology_fusion 0.980 | topology_fusion **0.560**, narrowly ahead of residual_only/prior_only (0.547) and residual_plus_prior (0.533) — single run, no seeds/CI at this scale |
+| Localization | residual_plus_prior **0.993** > topology_fusion 0.980 | topology_fusion **0.560**, narrowly ahead of residual_only/prior_only (0.547) and residual_plus_prior (0.533) |
 
-**Honest reading, updated twice now.** First pass (before §2.5):
+**Then multi-seed-confirmed** (30_ieee14_multi_seed_replication.py,
+same 4 seeds as the 5-bus study, n_rep=500 each — run specifically
+because the localization margin above was too narrow to trust off one
+run, per this project's own established rule):
+
+| Seed | Detection gap (topo − best non-relational) | Localization gap (topo − best non-relational) |
+|---|---|---|
+| 20260921 | −0.013 | +0.013 |
+| 42 | −0.013 | +0.013 |
+| 777 | −0.011 | +0.033 |
+| 2024 | −0.021 | +0.013 |
+| **mean ± std** | **−0.015 ± 0.004** | **+0.018 ± 0.010** |
+
+Sign never flips in either direction, across any seed.
+
+**Honest reading, updated three times now.** First pass (before §2.5):
 "topology helps at 5-bus, not at 14-bus — scale-dependent." Second
-pass (after §2.5, before this fix): "topology never helped at 5-bus
+pass (after §2.5, before the §5 fix): "topology never helped at 5-bus
 either — 14-bus independently confirms a null result, and wasn't
-touched by the bug." Both were wrong in the same specific way: neither
-checked whether the 14-bus "baselines" were actually topology-free,
-and they weren't — checked now, they weren't. Correct reading: **two
-separately-written pipelines each needed the identical class of fix**
-(exclude relational/degree columns from what's supposed to be a
-topology-free baseline), found independently, at different times, by
-auditing one after finding the bug in the other. Once both are
-corrected, they agree: no feature set is confidently ahead of the
-topology-free ablation at either scale — detection is unambiguous at
-both scales (5-bus: exact tie; 14-bus: residual\_only *and*
-residual\_plus\_prior both edge out topology\_fusion), localization is
-a real (5-bus, multi-seed) or narrow-and-unreplicated (14-bus,
-single run) story depending on scale. That the same mistake was made
-twice, independently, is itself worth noting: it suggests this is an
+touched by the bug" (wrong on the "wasn't touched" part — it was).
+Third pass (after the §5 fix, single IEEE-14 run): "no feature set is
+confidently ahead of the topology-free ablation at either scale" —
+wrong too, just not caught until the multi-seed re-run above. The
+correct reading, now that detection and localization have each been
+checked with the same rigor at both scales: **detection agrees
+cleanly at both scales** (topology_fusion never ahead of the best
+non-relational alternative — an exact tie at 5-bus, a consistent
+4-seed deficit at 14-bus). **Localization does not agree, and this is
+now a confirmed, not a suspected, reversal**: the topology-free
+ablation wins decisively at 5-bus (0.993 vs. 0.980); topology_fusion
+keeps a small but 4-seed-robust lead at IEEE-14 (mean gap +0.018,
+never flipping sign). This is the one place in the whole project where
+topology-relational features show a real, replicated advantage — and
+it only survived because the same "don't trust one run" discipline
+that caught the original n=72 false reversal (§2) was applied here
+too, rather than accepting the single-run "probably noise" read.
+
+That the residual_only/prior_only feature-definition bug was made
+independently in two separately-written pipelines remains worth
+noting on its own: it suggests this specific comparison mistake is an
 easy trap in "topology-aware feature" engineering generally, not a
-one-off slip in one script.
+one-off slip in one script — but, now confirmed, it does not mean
+"topology never helps anywhere." It means: check correctly, then take
+the answer you actually get, even when (like here) it's more
+complicated than a clean yes or no.
 
 ## 5.5. A literature-positioning claim was checked directly and didn't hold up as stated
 
@@ -485,6 +512,26 @@ complementary pre-check for it (the out-of-fold linear-redundancy test
 already in §2.5). Source count updated throughout (40/56 → 41/57,
 reflecting the one genuinely new, deeply-read source this pass added).
 
+## 5.6. A third network (IEEE 30-bus) — in progress
+
+Requested specifically to stress-test the redundancy hypothesis
+(§2.5): does the "relational aggregates are near-linearly redundant
+given local features on a small, fixed topology" mechanism keep
+holding as the network gets bigger and less sparse, or is IEEE-14's
+localization reversal (§5) itself scale-sensitive? `31_ieee30_scale_
+replication.py` is a direct copy of the now-fully-corrected `28_ieee14
+_scale_replication.py` with `pn.case14()` swapped for `pn.case30()`
+and output filenames changed — everything else (WLS/measurement/attack
+machinery, feature-set definitions, model training/evaluation) is
+identical by construction, so this is a clean scale-only comparison.
+IEEE 30-bus confirmed compatible before committing compute: `net.bus`
+== internal ppc bus count (30 == 30, checked directly, the same check
+that ruled out CIGRE MV originally), so `h_ac()` needs no changes.
+Smoke-tested at n_rep=30 (0 failed replications, all 4 feature sets
+present) before launching the real run. Results pending — this
+section will be updated once the n_rep=500 pass (and, if the margin is
+narrow like IEEE-14's was, a 4-seed replication of it) completes.
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,
@@ -522,14 +569,16 @@ line of work in the smart-grid cybersecurity literature generally.
 
 ## Limitations (explicit, for anyone deciding whether to write this up)
 
-1. **No topology-specific advantage was found at either scale tested**
-   (§2.5, §5), using two unrelated feature-engineering implementations.
-   Both are still limited to synthetic networks/loads; a third,
-   real-topology system (e.g. IEEE 30-bus, or a real feeder) would
-   further test whether this null result itself generalizes, but the
-   open question is no longer "does topology help at scale" — it's
-   "does this class of relational feature ever help, on any network,"
-   which the evidence so far says no to, twice.
+1. **Detection shows no topology-specific advantage at either scale
+   tested, confirmed across 4 seeds at both** (§2.5, §5), using two
+   unrelated feature-engineering implementations. **Localization is
+   different: a real, 4-seed-confirmed reversal** — the topology-free
+   ablation wins decisively at 5-bus, topology-fusion keeps a small
+   but consistent lead at IEEE-14 (§5). Both are still limited to
+   synthetic networks/loads; a third, real-topology system (e.g. IEEE
+   30-bus, or a real feeder) would test whether this specific
+   detection-null/localization-reversal pattern itself generalizes, or
+   is specific to these two topologies — in progress, see §5.6.
 2. **No zero-day generalization**: demonstrated directly in §4 — 0–4%
    recall on a completely withheld attack type. The detection/
    localization numbers above only hold for attack types represented
@@ -573,16 +622,29 @@ recur).
    is now confirmed at a matched 300-scenario test-set size, not a
    pilot. ~~Build the `residual_plus_prior` ablation and re-check
    whether the 5-bus topology advantage is real~~ **Done (§2.5)** —
-   it wasn't; corrected across 2 stress conditions and 4 seeds. What's
-   left on scale: try a third standard system (e.g. IEEE 30-bus) to
-   see whether this null result itself generalizes further, or is
-   specific to the two topologies tested so far.
+   it wasn't; corrected across 2 stress conditions and 4 seeds.
+   ~~Audit whether IEEE-14 has the same feature-definition bug~~
+   **Done (§5)** — it did, independently; fixed the same way. ~~Confirm
+   the narrow IEEE-14 localization margin across seeds, not just one
+   run~~ **Done (§5)** — real, 4-seed-confirmed reversal (topology
+   wins at 14-bus for localization specifically, loses everywhere
+   else). ~~Try a third standard system (IEEE 30-bus)~~ **In progress,
+   §5.6** — `31_ieee30_scale_replication.py`, confirmed compatible
+   with `h_ac()` (no CIGRE-MV-style bus-index mismatch) before
+   committing compute to it.
 2. Some form of unseen-attack robustness beyond pure supervised
    classification (e.g. anomaly-based pre-filter, or bridging Phase
    14/17's richer taxonomy) — §4 shows the current approach has none,
    and that's worth addressing rather than only disclosing.
 3. A direct numeric comparison against arXiv:2605.17256's own
    architectures on the same data, if their code/data is available.
-4. Re-run §4's zero-day test on `residual_plus_prior` specifically
-   (currently only verified for `topology_fusion`) — flagged in
-   Limitations item 2, not expected to differ but not yet checked.
+4. ~~Re-run §4's zero-day test on `residual_plus_prior` specifically~~
+   **Done** — collapses identically to `topology_fusion`; also caught
+   a stale seed=2024 data snapshot in the process (corrected numbers
+   now in §4).
+5. IEEE-14's localization reversal is now confirmed but not explained
+   the way the 5-bus null result is (§2.5's out-of-fold redundancy
+   check hasn't been run on IEEE-14's own features) — would directly
+   test the "less redundant on a bigger, more meshed network" hypothesis
+   floated in `paper/main.tex` §VIII's Discussion instead of leaving it
+   as speculation.

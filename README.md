@@ -43,16 +43,24 @@ standard, meshed network (IEEE 14-bus, n=500 replications, 300 test
 scenarios) turned out to need the *same* fix -- an independent
 rediscovery of the same category of mistake, in a cruder form (an
 explicit list of neighbor/degree columns inside "residual_only" this
-time, not a name-substring collision). Once corrected there too:
-`residual_only` (0.750) is the single best detector, ahead of both the
-topology-free ablation (0.743) and `topology_fusion` (0.737);
-`topology_fusion` keeps a narrow, single-run (not multi-seed-confirmed)
-localization edge (0.560 vs. 0.533-0.547). Two independently-written
-pipelines needing the identical fix, and agreeing once fixed, is
-stronger evidence than either alone -- and suggests this specific
-mistake (comparing a topology-rich feature set against baselines that
-were never actually topology-free) is an easy, general trap, not a
-one-off slip.
+time, not a name-substring collision). Once corrected and confirmed
+across 4 independent seeds, the two networks agree on **detection**
+(`topology_fusion` never confidently ahead of the best non-relational
+alternative -- an exact tie at 5-bus, a consistent 4-seed deficit at
+IEEE-14) but **not on localization**: the topology-free ablation wins
+decisively at 5-bus, while `topology_fusion` keeps a small, 4-seed-robust
+lead at IEEE-14 (mean gap +0.018, range +0.013 to +0.033, sign never
+flipping). That's a real, replicated reversal, not noise on either
+side of it -- the one place in this whole project where explicit
+topology-relational features show a genuine advantage. Two
+independently-written pipelines needing the identical feature-definition
+fix is itself informative -- it suggests that specific mistake
+(comparing a topology-rich feature set against baselines that were
+never actually topology-free) is an easy, general trap -- but, now
+confirmed, it does not mean topology never helps anywhere: it means
+the honest answer is task- and scale-specific, not a clean yes or no.
+(A third network, IEEE 30-bus, is in progress to test whether this
+exact pattern itself generalizes -- see `STATUS.md` §5.6.)
 
 Two further things, still true and still worth reporting plainly: the
 detector does **not** generalize to an attack type it never trained on
