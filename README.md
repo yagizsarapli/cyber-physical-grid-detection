@@ -21,17 +21,21 @@ at both detecting a stealthy false-data-injection attack (balanced
 accuracy 0.950 vs. 0.873) and localizing it (top-1 accuracy 0.980 vs.
 0.780) -- validated across 4 independent random seeds, gap never flips
 sign. The full decision pipeline (state estimation -> feature
-computation -> classification) was profiled against a protective
-relay's real-time budget (20 ms at 50 Hz): the original 43 ms pipeline
-turned out to be slow because of a fixable software inefficiency, not
-the model or the estimator's math -- fixing it brought the pipeline to
-16.4/17.0/17.1 ms at the median/p95/p99.
+computation -> classification) was profiled against a one-cycle
+(20 ms at 50 Hz) protection-relevant computational target: the
+original 43 ms pipeline turned out to be slow because of a fixable
+software inefficiency, not the model or the estimator's math --
+fixing it brought the pipeline to 16.4/17.0/17.1 ms at the
+median/p95/p99.
 
 Two things temper that: the detector does **not** generalize to an
 attack type it never trained on (0-4% recall when one of two attack
-families is withheld), and a pilot at a bigger, standard, meshed
-network (IEEE 14-bus) does **not** clearly reproduce the topology
-advantage -- a simpler baseline localizes better there. Both are
+families is withheld), and a confirmed, sample-size-matched study at a
+bigger, standard, meshed network (IEEE 14-bus, n=500 replications, 300
+test scenarios) does **not** reproduce the topology advantage -- for
+detection, a simpler residual-only baseline is now the outright best
+(0.750 vs. topology-fusion's own best of 0.737); for localization,
+topology-fusion keeps only a narrow, non-decisive edge. Both are
 reported as real findings, not hidden.
 
 **Full story, with every number and why it's trustworthy: [`STATUS.md`](STATUS.md).**
@@ -57,7 +61,9 @@ exploration/            Phases 2A-2P (01..20_*.py): microgrid model,
 25_wls_overhead_diagnostic.py   Root-cause split of the latency gap
 26_multi_seed_replication.py    4-seed statistical validation
 27_held_out_attack_type_*.py    Zero-day generalization test
-28_ieee14_scale_replication.py  The IEEE 14-bus scale pilot
+28_ieee14_scale_replication.py  The IEEE 14-bus scale study
+                       (confirmed at n=500, matching the 5-bus study's
+                       own 300-scenario test-set size)
 29_paper_figures.py    Generates figures/paper_fig*.png from results/
 
 STATUS.md              Research log -- what was done, in what order,
@@ -110,7 +116,7 @@ python3 23_topology_aware_cyber_physical_localization_HARD.py
 python3 26_multi_seed_replication.py          # ~15-20 min, 4 full reruns
 python3 27_held_out_attack_type_generalization.py
 python3 24_realtime_latency_benchmark_FINAL.py
-python3 28_ieee14_scale_replication.py --n-rep 200   # slower per-replication than the 5-bus scripts
+python3 28_ieee14_scale_replication.py --n-rep 500   # slower per-replication than the 5-bus scripts; this is the confirmed run (§7 of STATUS.md) -- --n-rep 200 was an earlier, superseded pass
 python3 29_paper_figures.py
 ```
 
@@ -158,10 +164,12 @@ the short version:
 - Bibliography: 40/56 sources verified in depth; a handful of
   IEEE Xplore/ACM-hosted sources couldn't be fetched at all (paywall)
   and need institutional access.
-- Scale: the IEEE 14-bus pilot (`28_ieee14_scale_replication.py`) is
-  real but smaller (n=200) than the validated 5-bus result (n=300,
-  4 seeds) -- a bigger run, or a second standard test system, would
-  make the scale finding conclusive rather than suggestive.
+- Scale: the IEEE 14-bus study (`28_ieee14_scale_replication.py`) is
+  now confirmed at n=500 (300 test scenarios), matching the validated
+  5-bus result's own test-set size -- the topology-fusion advantage
+  does **not** transfer at this scale. Only two network topologies
+  have been tested; a third standard system (e.g. IEEE 30-bus) would
+  show whether that pattern itself generalizes.
 - No target venue has formally accepted anything -- `paper/main.tex`
   is formatted for IEEE SmartGridComm as the best topical fit found,
   not a submission in progress.

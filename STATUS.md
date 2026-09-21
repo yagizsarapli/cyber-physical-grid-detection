@@ -16,8 +16,8 @@ within a one-cycle protection-relevant computational target (50 Hz =
 every protective relaying function requires exactly this latency).
 
 Under a realistic attack magnitude (pushed toward the sensor noise
-floor, not the original easy configuration) **and** with a properly
-powered test set (n=300, not n=72), topology-fusion features give a
+floor, not the original easy configuration) **and** with a large
+enough test set (n=300, not n=72), topology-fusion features give a
 real, statistically supported advantage for both detection
 (balanced accuracy 0.950–0.953) and localization (top-1 0.980) over
 a simpler prior-based baseline (0.83–0.90 detection, 0.75–0.78
@@ -31,10 +31,10 @@ a single outlier over 300 trials still exceeding it (21.3 ms max).
 
 Tested at a bigger, standard scale (IEEE 14-bus, §5) at three
 escalating sample sizes, ending at n=500 — matching the 5-bus study's
-own statistical power exactly: the advantage does **not** transfer.
+own 300-scenario test-set size exactly: the advantage does **not** transfer.
 Residual-only detection (0.750) outright beats topology-fusion (0.737)
 there; topology-fusion keeps only a narrow, non-decisive localization
-edge (0.560 vs. 0.507-0.547). This is a confirmed, equally-powered
+edge (0.560 vs. 0.507-0.547). This is a confirmed, sample-size-matched
 result, not a pilot with an asterisk — the honest scope of the claim
 is now "helps on small, simple networks; does not help, and for
 detection actively underperforms a simpler baseline, on larger meshed
@@ -258,7 +258,7 @@ residual analysis is now the single best-performing feature set on
 IEEE 14-bus, ahead of topology_fusion. For localization, topology_fusion
 keeps a narrow edge, but nothing resembling the decisive 5-bus gap
 (0.560 vs. 0.980). This is no longer a pilot with an asterisk — it's a
-direct, equally-powered comparison, and the answer is: **the
+direct, sample-size-matched comparison, and the answer is: **the
 topology-fusion advantage does not transfer to IEEE 14-bus.**
 
 **Honest reading: the advantage looks scale/topology-dependent, not
