@@ -11,8 +11,9 @@ GFM inverter) with a WLS AC state estimator is used to test whether
 topology-aware relational features let a classifier (a) tell a cyber
 false-data-injection attack apart from a legitimate physical
 disturbance, (b) localize which bus is affected, and (c) do both
-within a protective relay's real-time budget (1 cycle @ 50 Hz = 20 ms,
-confirmed from `net.f_hz`, not assumed).
+within a one-cycle protection-relevant computational target (50 Hz =
+20 ms, confirmed from `net.f_hz`, not assumed -- not a claim that
+every protective relaying function requires exactly this latency).
 
 Under a realistic attack magnitude (pushed toward the sensor noise
 floor, not the original easy configuration) **and** with a properly
@@ -353,7 +354,9 @@ recur).
 ## Next, if this becomes a write-up
 
 1. ~~Push `28_ieee14_scale_replication.py` to n_rep≈500~~ **Done** — §5
-   is now confirmed at matched statistical power, not a pilot. What's
+   is now confirmed at a matched 300-scenario test-set size, not a
+   pilot (not a formal power analysis — same N, not verified-equal
+   statistical power). What's
    left on scale: try a second standard system (e.g. IEEE 30-bus) to
    see whether "topology-fusion loses its edge past ~14 buses" itself
    generalizes, or is specific to IEEE 14-bus's particular topology.
