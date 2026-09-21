@@ -1,0 +1,10 @@
+# Verified working set (Python 3.12.4). Pin loosely if you hit
+# conflicts with other projects -- nothing here depends on an exact
+# patch version, this is just what every script in this repo was
+# actually run against.
+pandapower==2.14.10
+pandas==2.2.2
+numpy==1.26.4
+scipy==1.13.1
+scikit-learn==1.4.2
+matplotlib==3.8.4
