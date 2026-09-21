@@ -1,0 +1,13 @@
+# Generated data and results are regeneratable from the numbered phase
+# scripts (fixed seeds documented in STATUS.md) — not tracked to keep
+# the repo small and GitHub-friendly. Findings/tables live in STATUS.md,
+# RELATED_WORK.md, and PAPER_DRAFT.md instead of raw CSVs.
+data/
+results/
+
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
+*.log
