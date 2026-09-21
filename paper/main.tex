@@ -176,18 +176,21 @@ Following \cite{abukhousa2026latency}'s finding that fast classifiers can still 
 \section{Results III: The Advantage Does Not Extrapolate to Unseen Attack Types}
 \label{sec:zeroday}
 
-To test whether Section~\ref{sec:results1}'s detector generalizes beyond the two attack families it was trained on (as opposed to merely discriminating them well), we trained \texttt{topology\_fusion}/HistGradientBoosting with one entire attack family withheld from training and validation, then measured recall on exactly that withheld family (Table~\ref{tab:zeroday}, Fig.~\ref{fig:zeroday}). This test uses \texttt{topology\_fusion} specifically, unaffected by Section~\ref{sec:results1}'s correction (which changes only how \texttt{residual\_only}/\texttt{prior\_only} are defined); whether \texttt{residual\_plus\_prior} shows the same collapse was not independently re-tested, though Section~\ref{sec:results1}'s finding that the two feature sets are behaviorally near-identical in-distribution gives no reason to expect a difference.
+To test whether Section~\ref{sec:results1}'s detector generalizes beyond the two attack families it was trained on (as opposed to merely discriminating them well), we trained HistGradientBoosting with one entire attack family withheld from training and validation, then measured recall on exactly that withheld family (Table~\ref{tab:zeroday}, Fig.~\ref{fig:zeroday}). Run for both \texttt{topology\_fusion} and the topology-free \texttt{residual\_plus\_prior} ablation, to check directly whether the collapse below is specific to one feature set or, as Section~\ref{sec:results1}'s in-distribution finding would predict, behaviorally identical for both.
 
 \begin{table}[t]
 \centering
 \caption{Recall on a withheld vs.\ trained-on attack type}
 \label{tab:zeroday}
-\begin{tabular}{@{}lcc@{}}
+\footnotesize
+\begin{tabular}{@{}llcc@{}}
 \toprule
-Attack type & Withheld & In training \\
+Attack type & Features & Withheld & In training \\
 \midrule
-Naive single-sensor corruption & 0.000 & 0.893 \\
-Model-consistent (stealth) FDIA & 0.040 & 1.000 \\
+Naive corruption & topo.\ fusion & 0.000 & 0.827 \\
+Naive corruption & res.+prior & 0.000 & 0.827 \\
+Stealth FDIA & topo.\ fusion & 0.033 & 1.000 \\
+Stealth FDIA & res.+prior & 0.047 & 1.000 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -195,11 +198,11 @@ Model-consistent (stealth) FDIA & 0.040 & 1.000 \\
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{../figures/paper_fig3_zeroday_generalization.png}
-\caption{Recall collapses when an attack type is withheld from training.}
+\caption{Recall collapses when an attack type is withheld from training (\texttt{topology\_fusion} shown; \texttt{residual\_plus\_prior} is behaviorally identical, Table~\ref{tab:zeroday}).}
 \label{fig:zeroday}
 \end{figure}
 
-The detector recognizes the statistical signature of attack types represented in its training data -- including the stealthy one, very well -- but does not extrapolate to a mechanism it has not seen. We report this as a hard scope limit on any deployment claim built on Section~\ref{sec:results1}'s results: within this project's own two-family attack taxonomy, this is a complete absence of zero-day capability, not a partial one. This complements, from the opposite direction, a related generalization gap documented in the fault-classification literature: an XGBoost-based classifier trained and evaluated on the \emph{same} distribution still drops from 96.8\% (synthetic data) to 85.2\% (physical data) \cite{senyuk2025bulk} -- i.e., even without an unseen attack \emph{type}, a synthetic-to-real distribution shift alone costs over 11 points. Between that gap and this paper's own 0--4\% held-out-type result, generalization -- of any kind -- looks like the open problem for this class of detector, not an edge case. A deployment-aware zero-day evaluation in the adjacent EV/V2X charging-infrastructure domain \cite{sakr2026explainable} is a useful methodological reference for what a more rigorous version of Section~\ref{sec:zeroday}'s test could look like.
+The detector recognizes the statistical signature of attack types represented in its training data -- including the stealthy one, very well -- but does not extrapolate to a mechanism it has not seen, and this holds identically whether or not topology-relational features are included: the two feature sets land within 1--1.4 percentage points of each other on every cell of Table~\ref{tab:zeroday}, confirming Section~\ref{sec:results1}'s prediction that they are behaviorally interchangeable, here for a question -- generalization to an unseen mechanism -- that has nothing to do with topology specifically. We report this as a hard scope limit on any deployment claim built on Section~\ref{sec:results1}'s results: within this project's own two-family attack taxonomy, this is a complete absence of zero-day capability, not a partial one, for either feature set. This complements, from the opposite direction, a related generalization gap documented in the fault-classification literature: an XGBoost-based classifier trained and evaluated on the \emph{same} distribution still drops from 96.8\% (synthetic data) to 85.2\% (physical data) \cite{senyuk2025bulk} -- i.e., even without an unseen attack \emph{type}, a synthetic-to-real distribution shift alone costs over 11 points. Between that gap and this paper's own 0--4.7\% held-out-type result, generalization -- of any kind -- looks like the open problem for this class of detector, not an edge case. A deployment-aware zero-day evaluation in the adjacent EV/V2X charging-infrastructure domain \cite{sakr2026explainable} is a useful methodological reference for what a more rigorous version of Section~\ref{sec:zeroday}'s test could look like.
 
 \section{Results IV: An Independent Network Scale Confirms the Same Null Result}
 \label{sec:scale}
@@ -253,7 +256,7 @@ The paper's original framing -- ``does topology help, and where does that stop''
 
 \begin{enumerate}
 \item \textbf{Scale}: Section~\ref{sec:scale}'s IEEE 14-bus study independently cross-validates Section~\ref{sec:results1}'s corrected 5-bus finding using an unrelated feature-engineering design (itself independently found to need, and given, the same correction -- Section~\ref{sec:scale}), but only two network topologies have been tested overall, and neither uses a real (non-synthetic) network or load profile. The IEEE-14 localization result specifically (\texttt{topology\_fusion} narrowly ahead, Table~\ref{tab:scale}) is a single run with no seed replication or bootstrap CI, unlike the 5-bus result, and should be read as suggestive, not confirmed.
-\item \textbf{No zero-day generalization} (Section~\ref{sec:zeroday}): detection/localization numbers hold only for attack types represented in training, and this was verified for \texttt{topology\_fusion} specifically, not independently re-run for \texttt{residual\_plus\_prior}.
+\item \textbf{No zero-day generalization} (Section~\ref{sec:zeroday}): detection/localization numbers hold only for attack types represented in training -- verified for both \texttt{topology\_fusion} and \texttt{residual\_plus\_prior}, which collapse identically (Table~\ref{tab:zeroday}); localization was not separately re-tested for zero-day generalization (only detection was), and the underlying attack taxonomy is still limited to two families (item 3 below).
 \item \textbf{Single testbed family, two attack types}: restricting which measurements a stealth attack compromises is a physical consequence of the AC-consistent attack construction, not a tunable knob, and was not varied.
 \item \textbf{Latency results} (Section~\ref{sec:latency}) characterize one Python/\texttt{pandapower} implementation on one machine, not a hardware or RTOS claim, and were not re-benchmarked on the smaller \texttt{residual\_plus\_prior} feature set (Section~\ref{sec:latency} argues this would not change the conclusion, since state estimation, not classification, dominates the budget, but this is an argument, not a re-measurement).
 \item \textbf{Related-work verification is partial}: of $\sim$56 sources surveyed during this project, 40 were read past search-summary level; two invented or misattributed figures were caught and corrected during that process, which is grounds for treating any remaining unstarred source as provisional.

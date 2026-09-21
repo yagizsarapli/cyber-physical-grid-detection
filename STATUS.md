@@ -298,31 +298,49 @@ independent seeds (20260812, 42, 777, 2024), n_rep=500 each:
 The gap's sign never flips across 4 independent draws — this is a
 real effect, not noise from one lucky dataset.
 
-**Held-out attack-type generalization** (`27_held_out_attack_type_generalization.py`,
-run on the seed=2024 data). Note this replaces an earlier plan to
-"re-run Phase 14 (zero-day)/17 (hard-negative) against the HARD data" —
-those scripts turned out to depend on a completely different upstream
-data lineage (`phase2g_v2_scenario_metadata.csv`, a richer 5-cyber/
-3-physical event taxonomy) that isn't compatible with the Phase 2Q/2R/2S
-graph-feature files without substantial bridging work. This script asks
-the same *kind* of question directly on the data already validated
-here instead: train topology_fusion/HistGradientBoosting with one
-cyber attack type **completely removed** from training, test recall
-on exactly that type.
+**Held-out attack-type generalization** (`27_held_out_attack_type_generalization.py`).
+Note this replaces an earlier plan to "re-run Phase 14 (zero-day)/17
+(hard-negative) against the HARD data" — those scripts turned out to
+depend on a completely different upstream data lineage
+(`phase2g_v2_scenario_metadata.csv`, a richer 5-cyber/3-physical event
+taxonomy) that isn't compatible with the Phase 2Q/2R/2S graph-feature
+files without substantial bridging work. This script asks the same
+*kind* of question directly on the data already validated here
+instead: train HistGradientBoosting with one cyber attack type
+**completely removed** from training, test recall on exactly that
+type. Originally run against `topology_fusion` only, on data that
+(unnoticed at the time) happened to be from the seed=2024 pass of
+§4's multi-seed loop rather than the primary seed; re-run here against
+the current primary-seed (20260812) data **and** the corrected
+`residual_plus_prior` set, closing the gap flagged in §9/Limitations
+("not independently re-tested for residual_plus_prior").
 
-| Held out | Recall when withheld | Recall when trained on it |
-|---|---|---|
-| naive_single_sensor_corruption | **0.000** | 0.893 |
-| nonlinear_model_consistent_fdia (stealth) | **0.040** | 1.000 |
+| Held out | Feature set | Recall when withheld | Recall when trained on it |
+|---|---|---|---|
+| naive_single_sensor_corruption | topology_fusion | **0.000** | 0.827 |
+| naive_single_sensor_corruption | residual_plus_prior | **0.000** | 0.827 |
+| nonlinear_model_consistent_fdia (stealth) | topology_fusion | **0.033** | 1.000 |
+| nonlinear_model_consistent_fdia (stealth) | residual_plus_prior | **0.047** | 1.000 |
+
+(The 0.893/0.040 numbers previously reported here were computed
+against the seed=2024 snapshot of `phase2s_hard_graph_feature_matrix.csv`,
+left over from an earlier step in this session rather than a
+computation error — reproducible, just not from the primary-seed data
+the rest of this document uses. Corrected above.)
 
 **Honest conclusion**: the detector does not extrapolate to an attack
 mechanism it has never seen — it recognizes the specific statistical
 signatures of the attack types in its training data (including the
 stealthy one, very well) but has no mechanism to generalize beyond
 them, exactly as expected for a supervised classifier with only two
-attack families to learn from. Any real deployment claim needs this
-stated plainly: strong within-distribution discrimination, no
-demonstrated zero-day capability.
+attack families to learn from. This holds **identically regardless of
+whether topology-relational features are included** — `topology_fusion`
+and `residual_plus_prior` land within 1.4 points of each other on
+every cell above, exactly as §2.5's in-distribution finding would
+predict for a question (generalizing to an unseen mechanism) that has
+nothing to do with topology specifically. Any real deployment claim
+needs this stated plainly: strong within-distribution discrimination,
+no demonstrated zero-day capability, for either feature set.
 
 ## 5. Scale study: IEEE 14-bus — confirmed, not just piloted
 

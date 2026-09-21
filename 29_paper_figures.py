@@ -160,6 +160,8 @@ plt.close(fig)
 # Figure 3 -- §6 zero-day generalization
 # ============================================================
 zd = pd.read_csv(RESULTS / "phase2u_held_out_attack_type.csv")
+if "feature_set" in zd.columns:
+    zd = zd[zd["feature_set"] == "topology_fusion"]  # this figure is topology_fusion only; residual_plus_prior rows are reported in the text
 zd["attack_type"] = zd["condition"].str.split(":").str[1]
 zd["kind"] = zd["condition"].str.split(":").str[0]
 pivot = zd.pivot(index="attack_type", columns="kind", values="recall_on_test")

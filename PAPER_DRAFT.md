@@ -102,16 +102,18 @@ Following [arXiv:2605.17256]'s finding that fast classifiers can still sit insid
 
 ## 6. Results III: The Advantage Does Not Extrapolate to Unseen Attack Types
 
-To test whether §4's detector generalizes beyond the two attack families it was trained on (as opposed to merely discriminating them well), we trained `topology_fusion`/HistGradientBoosting with one entire attack family withheld from training and validation, then measured recall on exactly that withheld family. This test uses `topology_fusion` specifically, unaffected by §4's correction (which changes only how `residual_only`/`prior_only` are defined); whether `residual_plus_prior` shows the same collapse was not independently re-tested, though §4's finding that the two feature sets are behaviorally near-identical in-distribution gives no reason to expect a difference.
+To test whether §4's detector generalizes beyond the two attack families it was trained on (as opposed to merely discriminating them well), we trained HistGradientBoosting with one entire attack family withheld from training and validation, then measured recall on exactly that withheld family. Run for both `topology_fusion` and the topology-free `residual_plus_prior` ablation, to check directly whether the collapse below is specific to one feature set or, as §4's in-distribution finding would predict, behaviorally identical for both.
 
-| Held-out attack type | Recall when withheld | Recall when included in training |
-|---|---|---|
-| Naive single-sensor corruption | 0.000 | 0.893 |
-| Model-consistent (stealth) FDIA | 0.040 | 1.000 |
+| Held-out attack type | Features | Recall when withheld | Recall when included in training |
+|---|---|---|---|
+| Naive single-sensor corruption | topology_fusion | 0.000 | 0.827 |
+| Naive single-sensor corruption | residual_plus_prior | 0.000 | 0.827 |
+| Model-consistent (stealth) FDIA | topology_fusion | 0.033 | 1.000 |
+| Model-consistent (stealth) FDIA | residual_plus_prior | 0.047 | 1.000 |
 
 ![Recall collapses on a withheld attack type](figures/paper_fig3_zeroday_generalization.png)
 
-The detector recognizes the statistical signature of attack types represented in its training data — including the stealthy one, very well — but does not extrapolate to a mechanism it has not seen. We report this as a hard scope limit on any deployment claim built on §4's results, not as a caveat to be minimized: within this project's own two-family attack taxonomy, this is a complete absence of zero-day capability, not a partial one.
+The detector recognizes the statistical signature of attack types represented in its training data — including the stealthy one, very well — but does not extrapolate to a mechanism it has not seen, and this holds identically whether or not topology-relational features are included: the two feature sets land within 1-1.4 percentage points of each other on every cell above, confirming §4's prediction that they are behaviorally interchangeable for a question that has nothing to do with topology specifically. We report this as a hard scope limit on any deployment claim built on §4's results, not as a caveat to be minimized: within this project's own two-family attack taxonomy, this is a complete absence of zero-day capability, not a partial one, for either feature set.
 
 ## 7. Results IV: An Independent Network Scale Confirms the Same Null Result
 
@@ -145,7 +147,7 @@ Read together, §4-§7 converge on one finding, reached twice, independently, in
 ## 9. Limitations
 
 1. **Scale**: §7's IEEE 14-bus study independently cross-validates §4's corrected 5-bus finding using an unrelated feature-engineering design (itself independently found to need, and given, the same correction — §7), but only two network topologies have been tested overall, and neither uses a real (non-synthetic) network or load profile. The IEEE-14 localization result specifically (topology_fusion narrowly ahead, Table 2) is a single run with no seed replication or bootstrap CI, unlike the 5-bus result, and should be read as suggestive, not confirmed.
-2. **No zero-day generalization** (§6): detection/localization numbers hold only for attack types represented in training, and this was verified for `topology_fusion` specifically, not independently re-run for `residual_plus_prior`.
+2. **No zero-day generalization** (§6): detection/localization numbers hold only for attack types represented in training — verified for both `topology_fusion` and `residual_plus_prior`, which collapse identically; localization itself was not separately re-tested for zero-day generalization (only detection was), and the underlying attack taxonomy is still limited to two families (item 3 below).
 3. **Single testbed family, two attack types**: restricting which measurements a stealth attack compromises is a physical consequence of the AC-consistent attack construction, not a tunable knob, and was not varied.
 4. **Latency results** (§5) characterize one Python/`pandapower` implementation on one machine, not a hardware or RTOS claim, and were not re-benchmarked on the smaller `residual_plus_prior` feature set (§5 argues this would not change the conclusion, since state estimation, not classification, dominates the budget, but this is an argument, not a re-measurement).
 5. **Related work verification is partial**: of ~56 sources surveyed, 40 were read past search-summary level; two invented or misattributed figures were caught and corrected during that process, which is grounds for treating every unstarred citation in this draft as provisional until independently read.
@@ -163,4 +165,4 @@ On both a small inverter-dominated microgrid and a larger, meshed IEEE 14-bus ne
 3. ~~**Figures**~~ **Done**: 4 figures regenerated (`29_paper_figures.py`, validated categorical palette) to reflect the §4 correction — multi-seed advantage now compares `topology_fusion`/`residual_plus_prior`/`prior_only`, latency waterfall, zero-day collapse, 5-bus-vs-IEEE-14 scale comparison. Not yet checked against a specific venue's figure/caption formatting requirements.
 4. ~~A swept scale study~~ **Done, and now interpreted correctly**: §7 is confirmed at a matched sample size on one additional system (IEEE 14-bus), and — after the §4 correction — read as an independent confirmation of the same null result rather than a "does it transfer" complication. A third system (e.g. IEEE 30-bus) would still strengthen the generalization of the null result itself.
 5. ~~**A named venue/format target**~~ **Done**: `paper/main.tex` is formatted for IEEE SmartGridComm (IEEEtran conference class), compiles to a 7-page PDF (`paper/main.pdf`). Not yet submitted anywhere -- this is the best topical fit found, not a submission in progress.
-6. **Re-run §6's zero-day test on `residual_plus_prior`**, not just `topology_fusion` (flagged in Limitations item 2) — cheap to do, not yet done.
+6. ~~Re-run §6's zero-day test on `residual_plus_prior`~~ **Done**: collapses identically to `topology_fusion` (within 1-1.4 points on every cell). Also incidentally caught that the previously-reported numbers (0.893/0.040) were from a stale seed=2024 data snapshot rather than the primary seed used everywhere else — corrected to 0.827/0.033-0.047 in the process.

@@ -61,7 +61,19 @@ phase23 = load_module(
 CYBER_TYPES = ["naive_single_sensor_corruption", "nonlinear_model_consistent_fdia"]
 
 
-def fit_eval(df, feat_cols, train_mask, test_mask, test_label):
+# Originally topology_fusion only ("this test uses topology_fusion
+# specifically, unaffected by Sec. IV's correction -- whether
+# residual_plus_prior shows the same collapse was not independently
+# re-tested"). Added residual_plus_prior here to close that flagged
+# gap: Sec. IV shows the two feature sets are behaviorally
+# near-identical in-distribution, so the mechanistic expectation is
+# that the zero-day collapse -- which is about attack TYPES never
+# seen at all, not about which non-relational features are used --
+# should not depend on whether topology-relational columns are present.
+FEATURE_SETS_TO_TEST = ["topology_fusion", "residual_plus_prior"]
+
+
+def fit_eval(df, feat_cols, train_mask, test_mask, test_label, feature_set):
     X_train = df.loc[train_mask, feat_cols]
     y_train = df.loc[train_mask, "is_cyber"]
     X_test = df.loc[test_mask, feat_cols]
@@ -76,9 +88,11 @@ def fit_eval(df, feat_cols, train_mask, test_mask, test_label):
     pred = clf.predict(X_test)
 
     return {
+        "feature_set": feature_set,
         "condition": test_label,
         "n_train": int(train_mask.sum()),
         "n_test": int(test_mask.sum()),
+        "n_features": len(feat_cols),
         "recall_on_test": float(recall_score(y_test, pred)) if y_test.nunique() > 1 or y_test.iloc[0] == 1 else float((pred == 1).mean()),
         "balanced_accuracy_on_full_test": None,  # filled by caller where relevant
     }
@@ -86,39 +100,40 @@ def fit_eval(df, feat_cols, train_mask, test_mask, test_label):
 
 def main():
     df = pd.read_csv(DATA / "phase2s_hard_graph_feature_matrix.csv")
-    feat_cols = phase23.feature_columns(df)["topology_fusion"]
+    all_feat_sets = phase23.feature_columns(df)
 
     rows = []
 
-    for held_out in CYBER_TYPES:
-        other_cyber = [c for c in CYBER_TYPES if c != held_out][0]
+    for feature_set in FEATURE_SETS_TO_TEST:
+        feat_cols = all_feat_sets[feature_set]
 
-        # Held-out-type generalization: train WITHOUT this type at all.
-        train_mask = (
-            (df["dataset_split"] == "train")
-            & (df["case"] != held_out)
-        )
-        # Test on ALL rows of the held-out type not used anywhere in training
-        # (train split only excludes it, so validation+test rows of this
-        # type are fair, unseen test material).
-        test_mask = (df["case"] == held_out) & (df["dataset_split"] != "train")
+        for held_out in CYBER_TYPES:
+            # Held-out-type generalization: train WITHOUT this type at all.
+            train_mask = (
+                (df["dataset_split"] == "train")
+                & (df["case"] != held_out)
+            )
+            # Test on ALL rows of the held-out type not used anywhere in
+            # training (train split only excludes it, so validation+test
+            # rows of this type are fair, unseen test material).
+            test_mask = (df["case"] == held_out) & (df["dataset_split"] != "train")
 
-        r = fit_eval(df, feat_cols, train_mask, test_mask,
-                     f"held_out:{held_out}")
-        rows.append(r)
+            r = fit_eval(df, feat_cols, train_mask, test_mask,
+                         f"held_out:{held_out}", feature_set)
+            rows.append(r)
 
-        # Reference ceiling: same recipe, but this type WAS in training
-        # (standard split), tested on its own normal test rows.
-        train_mask_std = (df["dataset_split"] == "train")
-        test_mask_std = (df["case"] == held_out) & (df["dataset_split"] == "test")
-        r_ceiling = fit_eval(df, feat_cols, train_mask_std, test_mask_std,
-                              f"seen_in_training:{held_out}")
-        rows.append(r_ceiling)
+            # Reference ceiling: same recipe, but this type WAS in training
+            # (standard split), tested on its own normal test rows.
+            train_mask_std = (df["dataset_split"] == "train")
+            test_mask_std = (df["case"] == held_out) & (df["dataset_split"] == "test")
+            r_ceiling = fit_eval(df, feat_cols, train_mask_std, test_mask_std,
+                                  f"seen_in_training:{held_out}", feature_set)
+            rows.append(r_ceiling)
 
-        print(f"\n{held_out}:")
-        print(f"  held-out recall     : {r['recall_on_test']:.3f} (n_test={r['n_test']})")
-        print(f"  seen-in-training recall: {r_ceiling['recall_on_test']:.3f} (n_test={r_ceiling['n_test']})")
-        print(f"  generalization gap  : {r_ceiling['recall_on_test'] - r['recall_on_test']:+.3f}")
+            print(f"\n[{feature_set}] {held_out}:")
+            print(f"  held-out recall     : {r['recall_on_test']:.3f} (n_test={r['n_test']})")
+            print(f"  seen-in-training recall: {r_ceiling['recall_on_test']:.3f} (n_test={r_ceiling['n_test']})")
+            print(f"  generalization gap  : {r_ceiling['recall_on_test'] - r['recall_on_test']:+.3f}")
 
     out = pd.DataFrame(rows)
     print("\n=== FULL TABLE ===")
