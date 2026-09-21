@@ -240,10 +240,25 @@ def one_replication(rep, load_buses, node_ids, adjacency, rng, base_net):
 
 
 def feature_sets(df):
-    residual_only = [c for c in df.columns if c.startswith("res_") or c.startswith("resnode_")]
-    prior_only = [c for c in df.columns if c.startswith("innov_") or c.startswith("innovnode_")]
-    topology_fusion = residual_only + prior_only
+    # NOTE (caught in a later audit, see STATUS.md Sec. 2.5/7.5): the
+    # single-argmax topology context (argmax_neighbor_mean/max,
+    # argmax_local_minus_neighbor, argmax_n_neighbors -- all pulled in
+    # here via the "resnode_"/"innovnode_" prefix) is itself relational,
+    # not local. Excluding it by the "neighbor" substring it always
+    # contains (argmax_n_neighbors included, since "n_neighbors"
+    # contains "neighbor") gives a genuinely topology-free
+    # residual_only/prior_only, matching the fix already applied to the
+    # 5-bus study's feature_columns(). topology_fusion is unchanged
+    # (still everything); residual_plus_prior is the new, fair,
+    # topology-free union.
+    res_all = [c for c in df.columns if c.startswith("res_") or c.startswith("resnode_")]
+    innov_all = [c for c in df.columns if c.startswith("innov_") or c.startswith("innovnode_")]
+    residual_only = [c for c in res_all if "neighbor" not in c]
+    prior_only = [c for c in innov_all if "neighbor" not in c]
+    residual_plus_prior = residual_only + prior_only
+    topology_fusion = res_all + innov_all
     return {"residual_only": residual_only, "prior_only": prior_only,
+            "residual_plus_prior": residual_plus_prior,
             "topology_fusion": topology_fusion}
 
 
@@ -334,11 +349,13 @@ def main():
     # Real trained localizer: rank every node's P(is_target) per scenario,
     # not just argmax-residual. Trained/evaluated on cyber scenarios only
     # (mirrors the 5-bus study's localization protocol).
+    # Same correction as feature_sets() above: node_res_nb_mean/nb_max/
+    # local_minus_nb and node_n_neighbors are all relational/structural,
+    # not local -- they do not belong in a topology-free baseline.
     node_feat_sets = {
-        "residual_only": ["node_res", "node_res_nb_mean", "node_res_nb_max",
-                           "node_res_local_minus_nb", "node_n_neighbors"],
-        "prior_only": ["node_innov", "node_innov_nb_mean", "node_innov_nb_max",
-                        "node_innov_local_minus_nb", "node_n_neighbors"],
+        "residual_only": ["node_res"],
+        "prior_only": ["node_innov"],
+        "residual_plus_prior": ["node_res", "node_innov"],
         "topology_fusion": ["node_res", "node_res_nb_mean", "node_res_nb_max",
                              "node_res_local_minus_nb",
                              "node_innov", "node_innov_nb_mean", "node_innov_nb_max",

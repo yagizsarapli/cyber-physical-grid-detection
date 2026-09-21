@@ -35,13 +35,17 @@ of the finding is unaffected by the §2.5 correction.
 Tested at a bigger, standard scale (IEEE 14-bus, §5) at three
 escalating sample sizes, ending at n=500 — matching the 5-bus study's
 own 300-scenario test-set size exactly, and built with a completely
-independent, size-agnostic feature design (never touched by the §2.5
-bug): topology-fusion shows no advantage there either. Residual-only
-detection (0.750) outright beats topology-fusion (0.737); topology-fusion
-keeps only a narrow, non-decisive localization edge (0.560 vs.
-0.507-0.547). Read together with §2.5, this is not "the advantage
-doesn't transfer to scale" — it's the same null result, reached
-independently twice, with two unrelated implementations, at two
+independent, size-agnostic feature design. That design turned out to
+need the *same* correction as §2.5, found independently during this
+audit (§5's own "second instance" writeup) — once fixed,
+topology-fusion shows no advantage there either. Residual-only
+detection (0.750) outright beats topology-fusion (0.737), and even the
+corrected topology-free ablation (residual_plus_prior, 0.743) edges it
+out; topology-fusion keeps only a narrow, single-run (not multi-seed)
+localization edge (0.560 vs. 0.533-0.547). Read together with §2.5,
+this is not "the advantage doesn't transfer to scale" — it's the same
+null result, reached independently twice, with two unrelated
+implementations that each independently needed the same fix, at two
 network sizes.
 
 One honest limit found by testing it directly: this advantage
@@ -363,37 +367,60 @@ the original, not just a scaled copy.
    localization — matching the 5-bus study's own n=300 power exactly):
    confirmed and sharpened, not reversed.**
 
-| | 5-bus (n=300 test) | IEEE 14-bus, n=200 (first read) | **IEEE 14-bus, n=500 (confirmed)** |
-|---|---|---|---|
-| Best detection | topology_fusion 0.950, **consistent across all 3 models** | topology_fusion/LR 0.766, inconsistent across models | **residual_only/LR 0.750 — now the outright best**, topology_fusion best is 0.737 (LR), not ahead |
-| Best localization | **topology_fusion 0.980**, prior_only 0.780 | residual_only 0.600, topology_fusion 0.517 | topology_fusion 0.560 — narrowly best again, but tight (prior_only 0.547, residual_only 0.507) — not decisive the way the 5-bus gap is |
+Passes 1 and 2 above (n_rep=80, 200) predate the bug fix described
+next and used the original, uncorrected `residual_only`/`prior_only`/
+`topology_fusion` definitions — their role is establishing that n=80
+was too small to trust (a sample-size lesson, independent of the
+feature-definition bug). Only the final n_rep=500 pass below uses the
+corrected features.
 
-**Reading, now with full statistical power on both sides of the
-comparison:** the n=200 pattern was not a fluke that a bigger sample
-would erase — it got clearer. For detection specifically, plain
-residual analysis is now the single best-performing feature set on
-IEEE 14-bus, ahead of topology_fusion. For localization, topology_fusion
-keeps a narrow edge, but nothing resembling the decisive 5-bus gap it
-was originally credited with (0.560 vs. 0.980) — and §2.5 has since
-shown that decisive-looking 5-bus gap was itself not a topology effect
-once measured against a fair ablation.
+**A second, independent instance of §2.5's bug, found during this
+audit.** The claim below (first written the same day as §2.5) that
+this feature design was "never touched by the §2.5 bug" was wrong —
+checked directly and it wasn't true. `feature_sets()` (detection)
+included the single-argmax node's neighbor-comparison columns
+(`resnode_argmax_neighbor_mean/max`, `..._local_minus_neighbor`,
+`..._n_neighbors`) inside `residual_only`/`prior_only` via the same
+kind of prefix match that caused §2.5's bug. The localization feature
+dict was worse — an *explicit* list, not even a prefix collision:
+`"residual_only": ["node_res", "node_res_nb_mean", "node_res_nb_max",
+"node_res_local_minus_nb", "node_n_neighbors"]` — 4 of 5 listed
+columns are neighbor/degree features, deliberately included under
+"residual_only". `topology_fusion` was, once again, defined as exactly
+`residual_only + prior_only`, so it never held any information beyond
+what those two "baselines" already had between them, for either task.
+Fixed identically to §2.5: relational/degree columns excluded from
+`residual_only`/`prior_only` by an explicit `"neighbor"` name marker
+(also catches `n_neighbors`), their union added as a fourth
+`residual_plus_prior` set. Re-ran the full n_rep=500 pass with the fix.
 
-**Honest reading, updated after §2.5: this is not a scale-dependence
-finding, it's the same null result found twice.** The original
-"honest reading" here concluded the topology advantage looked
-scale/topology-dependent — real at 5-bus, gone at 14-bus, because a
-meshed network's electrical "neighbors" are a less tight, less
-informative concept than on a small radial one. That is no longer the
-right explanation. §2.5 shows the 5-bus advantage itself does not
-survive comparison against a genuinely topology-free ablation
-(`residual_plus_prior`); it was never there to fail to transfer. What
-this section actually shows, read correctly, is a **second,
-independent confirmation of the same null result**, using a
-completely different feature-engineering implementation (size-agnostic
-global summaries here, vs. fixed per-bus regex-derived columns at
-5-bus) that was never touched by the §2.5 bug. Two independently-built
-pipelines agreeing that explicit topology-relational features add no
-measurable value is stronger evidence than either alone.
+**Corrected n=500 result** (best model per feature set):
+
+| | 5-bus (n=300 test) | **IEEE 14-bus, n=500 (corrected)** |
+|---|---|---|
+| Detection | topology_fusion 0.950 = residual_plus_prior 0.950 | residual_only/LR **0.750** best; residual_plus_prior 0.743, topology_fusion 0.737 close behind — neither the ablation nor topology_fusion leads |
+| Localization | residual_plus_prior **0.993** > topology_fusion 0.980 | topology_fusion **0.560**, narrowly ahead of residual_only/prior_only (0.547) and residual_plus_prior (0.533) — single run, no seeds/CI at this scale |
+
+**Honest reading, updated twice now.** First pass (before §2.5):
+"topology helps at 5-bus, not at 14-bus — scale-dependent." Second
+pass (after §2.5, before this fix): "topology never helped at 5-bus
+either — 14-bus independently confirms a null result, and wasn't
+touched by the bug." Both were wrong in the same specific way: neither
+checked whether the 14-bus "baselines" were actually topology-free,
+and they weren't — checked now, they weren't. Correct reading: **two
+separately-written pipelines each needed the identical class of fix**
+(exclude relational/degree columns from what's supposed to be a
+topology-free baseline), found independently, at different times, by
+auditing one after finding the bug in the other. Once both are
+corrected, they agree: no feature set is confidently ahead of the
+topology-free ablation at either scale — detection is unambiguous at
+both scales (5-bus: exact tie; 14-bus: residual\_only *and*
+residual\_plus\_prior both edge out topology\_fusion), localization is
+a real (5-bus, multi-seed) or narrow-and-unreplicated (14-bus,
+single run) story depending on scale. That the same mistake was made
+twice, independently, is itself worth noting: it suggests this is an
+easy trap in "topology-aware feature" engineering generally, not a
+one-off slip in one script.
 
 ## Positioning against related work
 

@@ -207,8 +207,8 @@ det14_best = det14.groupby("feature_set")["balanced_accuracy"].max().to_dict()
 loc14 = pd.read_csv(RESULTS / "phase2v_ieee14_localization_metrics.csv")
 loc14_best = dict(zip(loc14["feature_set"], loc14["top1_accuracy"]))
 
-order = ["topology_fusion", "prior_only", "residual_only"]
-colors3 = [BLUE, ORANGE, AQUA]
+order = ["topology_fusion", "residual_plus_prior", "prior_only", "residual_only"]
+colors4 = [BLUE, AQUA, ORANGE, INK_SECONDARY]
 
 fig, axes = plt.subplots(1, 2, figsize=(10, 4.4))
 
@@ -217,10 +217,10 @@ for ax, d5, d14, title in [
     (axes[1], loc5, loc14_best, "Localization (top-1 accuracy)"),
 ]:
     x = np.arange(2)
-    w = 0.25
-    for i, (feat, color) in enumerate(zip(order, colors3)):
+    w = 0.19
+    for i, (feat, color) in enumerate(zip(order, colors4)):
         vals = [d5[feat], d14[feat]]
-        offset = (i - 1) * w
+        offset = (i - 1.5) * w
         bars = ax.bar(x + offset, vals, width=w, color=color, zorder=3,
                        label=feat if ax is axes[0] else None)
         bar_labels(ax, bars, dy=0.02, fmt="{:.2f}")
@@ -230,8 +230,8 @@ for ax, d5, d14, title in [
     ax.set_title(title, fontsize=11, color=INK, pad=10)
     style_axes(ax)
 
-axes[0].legend(frameon=False, loc="upper center", bbox_to_anchor=(1.05, 1.22), ncol=3, fontsize=9.5)
-fig.suptitle("topology_fusion's edge over prior_only, at either scale, is a residual+prior effect, not topology (n=300, confirmed)",
+axes[0].legend(frameon=False, loc="upper center", bbox_to_anchor=(1.1, 1.22), ncol=4, fontsize=8.8)
+fig.suptitle("No feature set is consistently ahead of the topology-free ablation at either scale (n=300, confirmed)",
              fontsize=10.5, color=INK, y=1.04)
 fig.tight_layout()
 fig.savefig(FIGURES / "paper_fig4_scale_comparison.png", dpi=200, bbox_inches="tight")

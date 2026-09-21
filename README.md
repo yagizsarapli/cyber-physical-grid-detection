@@ -36,12 +36,23 @@ near-exact tie for detection (0.950 vs. 0.950) and a **win for the
 topology-free ablation** at localization (0.993 vs. 0.980) -- across
 two independent stress conditions and all 4 seeds. **Combining
 residual and prior information explains the entire advantage; explicit
-topology-awareness adds nothing measurable on this testbed.** This
-also explains why the same `topology_fusion` advantage separately
-failed to reproduce on a bigger, standard, meshed network (IEEE
-14-bus, n=500 replications, 300 test scenarios, built with a
-completely independent feature design): it was never a real topology
-effect to begin with, so it had nothing to transfer.
+topology-awareness adds nothing measurable on this testbed.**
+
+A separately-implemented, size-agnostic pipeline for a bigger,
+standard, meshed network (IEEE 14-bus, n=500 replications, 300 test
+scenarios) turned out to need the *same* fix -- an independent
+rediscovery of the same category of mistake, in a cruder form (an
+explicit list of neighbor/degree columns inside "residual_only" this
+time, not a name-substring collision). Once corrected there too:
+`residual_only` (0.750) is the single best detector, ahead of both the
+topology-free ablation (0.743) and `topology_fusion` (0.737);
+`topology_fusion` keeps a narrow, single-run (not multi-seed-confirmed)
+localization edge (0.560 vs. 0.533-0.547). Two independently-written
+pipelines needing the identical fix, and agreeing once fixed, is
+stronger evidence than either alone -- and suggests this specific
+mistake (comparing a topology-rich feature set against baselines that
+were never actually topology-free) is an easy, general trap, not a
+one-off slip.
 
 Two further things, still true and still worth reporting plainly: the
 detector does **not** generalize to an attack type it never trained on
