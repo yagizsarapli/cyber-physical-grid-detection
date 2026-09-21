@@ -642,9 +642,20 @@ recur).
    **Done** — collapses identically to `topology_fusion`; also caught
    a stale seed=2024 data snapshot in the process (corrected numbers
    now in §4).
-5. IEEE-14's localization reversal is now confirmed but not explained
-   the way the 5-bus null result is (§2.5's out-of-fold redundancy
-   check hasn't been run on IEEE-14's own features) — would directly
-   test the "less redundant on a bigger, more meshed network" hypothesis
-   floated in `paper/main.tex` §VIII's Discussion instead of leaving it
-   as speculation.
+5. ~~Run §2.5's out-of-fold redundancy check on IEEE-14's own
+   features, to test whether lower redundancy explains the
+   localization reversal~~ **Done — result: it doesn't.** Mean
+   $R^2$ = 0.959 (median 0.996, 96% of 84 node×column pairs above 0.8)
+   predicting each node's relational features from all 14 nodes' local
+   residual/innovation values — statistically indistinguishable from
+   5-bus's 0.960, not lower. The "less redundant at scale" hypothesis
+   in `paper/main.tex` §VIII's Discussion was wrong; corrected there to
+   report this directly instead of leaving it as untested speculation.
+   Current best guess (also now in §VIII, explicitly flagged as a
+   guess, not verified): the redundancy is present at both scales, but
+   whether a tree-based classifier with no built-in graph structure
+   can actually *find* the right subset of a flat, unstructured
+   28-column input to combine for each node may get harder as the
+   input gets less structured/bigger (14 nodes vs. 5), even when the
+   information is linearly there — an open, still-untested question
+   about model discoverability, not information content.
