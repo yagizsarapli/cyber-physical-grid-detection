@@ -58,6 +58,8 @@ A benign hard-negative case (`physical_load_disturbance`, a 25-70% load step at 
 
 ## 4. Results I: The Topology-Fusion Advantage, Corrected and Validated
 
+![Detection and localization advantage across 4 independent seeds](figures/paper_fig1_multiseed_advantage.png)
+
 **4.1 An initial near-perfect result was a methodology artifact, not a real effect.** The first evaluation of `topology_fusion` reported 1.000 on every detection and localization metric, across three model families, with zero-width bootstrap confidence intervals, on a 72-scenario test set. We treated this as a red flag rather than a result: a defensive coding gap was found and fixed (a feature-exclusion filter for evaluation/label columns that was claimed in a comment but not enforced in code) but re-running showed it had never been the cause — the true cause, already anticipated in the pipeline's own interpretation logic, was that the original attack scenarios had large, obvious state bias.
 
 **4.2 Under a realistic attack magnitude, the finding first looked like it had reversed — and that reversal was itself wrong.** Reducing attack magnitude roughly 3x, toward the sensor noise floor, and re-evaluating at the *same* small sample size (n=72 test) produced a detection result that looked like a genuine reversal: a simple prior-based score (balanced accuracy 0.903) outperforming topology-fusion (0.889), while topology-fusion retained a clear localization advantage (1.000 vs. 0.780). Regenerating the same stress condition with a properly powered test set (n=300, a 4x increase) overturned this reversal: topology-fusion led detection at 0.950 vs. 0.873, with non-overlapping 95% bootstrap confidence intervals ([0.923, 0.977] vs. [0.830, 0.897]), and localization held at 0.980 vs. 0.780. Adding a second, independent stress axis (doubled load-forecast uncertainty on top of the reduced attack magnitude) left the finding essentially unchanged (0.953 detection, 0.980 localization), indicating the effect is not fragile to the specific stress condition chosen.
@@ -78,6 +80,8 @@ Following [arXiv:2605.17256]'s finding that fast classifiers can still sit insid
 
 **5.5 Combined with a lighter classifier** (LogisticRegression, competitive with RandomForest per §4's accuracy results and 14x faster at inference), the pipeline reaches, at N=300 trials with 0 convergence failures: **16.41 ms median, 16.95 ms p95, 17.09 ms p99, 21.35 ms max** — median, p95, and p99 within the 20 ms budget; a single outlier (out of 300) still exceeds it. The residual variance traces to the state estimator's own internal solve-time variability, not further reducible from outside pandapower's general-purpose implementation without a custom estimator for this fixed topology.
 
+![Latency waterfall from the original pipeline to the final, tuned one](figures/paper_fig2_latency_waterfall.png)
+
 **Positioning.** [arXiv:2605.17256] measures the same category of gap (sub-15 ms classification embedded in 50-90 ms pipelines) on an industrial-grade EMT simulator and recommends hardware acceleration to close it. This paper's finding — that on this testbed roughly half of a comparable gap traced to an avoidable software inefficiency rather than any algorithmic or numerical cost — suggests pipeline profiling, not only hardware acceleration, deserves consideration as a first step before concluding a reported latency gap is an irreducible property of the underlying algorithms. A second, independent data point supports the "classifier inference itself is cheap" half of this argument specifically: a knowledge-distilled LightGBM detector for virtualized microgrids reports 54-67 ms per 1000 samples (~0.06 ms/sample) for inference alone [arXiv:2601.03495] — the same order of magnitude as this paper's own §5.5 model-inference sub-step (0.20 ms/sample), and, notably, nearly two orders of magnitude below this paper's *state-estimation* sub-step (16 ms). Read together, both results point the same way: once a classifier is lightened, the remaining latency budget is spent upstream of the model, not in it — an argument for profiling the whole pipeline before assuming the model is the target for optimization.
 
 ## 6. Results III: The Advantage Does Not Extrapolate to Unseen Attack Types
@@ -88,6 +92,8 @@ To test whether §4's detector generalizes beyond the two attack families it was
 |---|---|---|
 | Naive single-sensor corruption | 0.000 | 0.893 |
 | Model-consistent (stealth) FDIA | 0.040 | 1.000 |
+
+![Recall collapses on a withheld attack type](figures/paper_fig3_zeroday_generalization.png)
 
 The detector recognizes the statistical signature of attack types represented in its training data — including the stealthy one, very well — but does not extrapolate to a mechanism it has not seen. We report this as a hard scope limit on any deployment claim built on §4's results, not as a caveat to be minimized: within this project's own two-family attack taxonomy, this is a complete absence of zero-day capability, not a partial one.
 
@@ -105,6 +111,8 @@ Everything in §4-§6 uses the custom 5-bus microgrid. We attempted to test the 
 |---|---|---|
 | Best detection | topology_fusion 0.950, consistent across all 3 model families | topology_fusion/LogisticRegression 0.766 best overall, but *not* consistent — HistGradientBoosting shows topology_fusion (0.664) barely ahead of residual_only (0.614) and roughly tied with prior_only (0.665) |
 | Best localization | **topology_fusion 0.980** | **residual_only 0.600** — topology_fusion (0.517) and prior_only (0.517) are both worse |
+
+![5-bus vs. IEEE 14-bus: detection and localization by feature set](figures/paper_fig4_scale_comparison.png)
 
 A first, smaller pass at this pilot (n=80 replications, ~24 test scenarios) was inconclusive by design — the same underpowered-sample regime that had already produced (and then been corrected out of) a false reversal in §4.2. The n=200 result reported here is large enough that detection and localization tell an internally consistent story (both show the topology-fusion advantage weakening or reversing), rather than the model-to-model inconsistency that characterized the n=24 pilot — evidence this is a real pattern, not sampling noise, though n=200 remains smaller than §4's n=300/4-seed validation.
 
@@ -132,6 +140,6 @@ On a small inverter-dominated microgrid, topology-aware relational features give
 
 1. **Related work depth**: 30 of 56 sources now read past search-summary level (up from 9); read the remaining ~26, and the several IEEE Xplore/ACM-hosted ones that 403'd every attempt (need institutional access), before citing any specific number from them — two were already caught wrong in this process and corrected in place.
 2. **A real bibliography**: convert `RELATED_WORK.md`'s links into proper citation keys/BibTeX and in-text citations (the `[cite: ...]` placeholders above are not real citations).
-3. **Figures**: this draft has zero figures. §4-§7 each need at least one (accuracy/CI plot, latency waterfall, scale comparison bar chart) — the underlying data already exists in `results/` and `figures/` from the session that produced this draft.
+3. ~~**Figures**~~ **Done**: 4 figures generated (`29_paper_figures.py`, validated categorical palette) and embedded in §4-§7 — multi-seed advantage with per-seed dots, latency waterfall, zero-day collapse, 5-bus-vs-IEEE-14 scale comparison. Not yet checked against a specific venue's figure/caption formatting requirements.
 4. **A swept scale study** (§7's own stated limitation) if reviewer pushback on generalizability is expected.
 5. **A named venue/format target** — this draft is currently unstyled prose at roughly workshop-paper length (~2800 words); actual formatting (IEEE/ACM template, page limits, anonymization if required) depends on where this is submitted, which hasn't been decided yet.
