@@ -5,6 +5,11 @@
 data/
 results/
 
+# Per-phase diagnostic PNGs (regeneratable, not part of the paper) --
+# only the 4 figures the paper actually embeds are tracked.
+figures/*.png
+!figures/paper_fig*.png
+
 __pycache__/
 *.pyc
 .venv/
