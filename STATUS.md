@@ -226,6 +226,26 @@ also resolves what looked, before this fix, like a puzzle: why would a
 real, well-validated 5-bus effect fail to transfer to IEEE 14-bus
 (§5)? It doesn't need to — it was never there to transfer.
 
+**Why, structurally, not just empirically**: predicted each of the 65
+relational columns from `residual_plus_prior` alone, 5-fold
+cross-validated ridge regression, on the train split. Mean out-of-fold
+R² = 0.960 (median 1.000, min 0.652, 91% of columns above 0.8). On a
+fixed, small (5-bus, 4-line) topology, a neighbor-mean or
+incident-edge aggregate over a fixed, small neighbor set is close to
+an affine function of the very per-bus values `residual_plus_prior`
+already has in full — so a flexible classifier (HistGradientBoosting)
+can reconstruct nearly all of that relational information internally
+without ever being given it explicitly. This is a genuine explanation,
+not just a restatement of the result: it predicts *when* topology
+might start to matter (a network/feature design where relational
+aggregates are *not* near-linearly redundant given local information),
+and gives a cheap pre-check (this same out-of-fold R² test, no
+classifier training required) anyone could run on a candidate network
+before investing in a full topology-aware pipeline. It is specific to
+the 5-bus mechanism, though — it does not by itself explain the
+independent IEEE 14-bus null result, which uses an unrelated feature
+design; the two results are consistent, not mechanistically identical.
+
 ## 3. Real-time latency: found the bottleneck, fixed most of it
 
 Budget: 1 cycle @ confirmed 50 Hz = 20 ms. One-time network/model
