@@ -193,7 +193,7 @@ plt.close(fig)
 
 
 # ============================================================
-# Figure 4 -- §7 scale comparison, 5-bus vs IEEE 14-bus
+# Figure 4 -- §7 scale comparison, 5-bus vs IEEE 14-bus vs IEEE 30-bus
 # ============================================================
 # Read the 5-bus side from the same (corrected, primary-seed) HARD
 # results Table II/the main text use, instead of a hardcoded snapshot
@@ -225,32 +225,40 @@ loc14_best = {
     "residual_only": det14w["residual_only_loc"].mean(),
 }
 
+# IEEE-30: single run so far (n_rep=500) -- multi-seed replication not
+# yet run, unlike IEEE-14. Included because the single-run pattern
+# already matches IEEE-14's multi-seed-confirmed one closely.
+det30_df = pd.read_csv(RESULTS / "phase2x_ieee30_detection_metrics.csv")
+det30_best = det30_df.groupby("feature_set")["balanced_accuracy"].max().to_dict()
+loc30_df = pd.read_csv(RESULTS / "phase2x_ieee30_localization_metrics.csv")
+loc30_best = dict(zip(loc30_df["feature_set"], loc30_df["top1_accuracy"]))
+
 order = ["topology_fusion", "residual_plus_prior", "prior_only", "residual_only"]
 colors4 = [BLUE, AQUA, ORANGE, INK_SECONDARY]
 
-fig, axes = plt.subplots(1, 2, figsize=(10, 4.4))
+fig, axes = plt.subplots(1, 2, figsize=(11, 4.4))
 
-for ax, d5, d14, title in [
-    (axes[0], det5, det14_best, "Detection (balanced accuracy)"),
-    (axes[1], loc5, loc14_best, "Localization (top-1 accuracy)"),
+for ax, d5, d14, d30, title in [
+    (axes[0], det5, det14_best, det30_best, "Detection (balanced accuracy)"),
+    (axes[1], loc5, loc14_best, loc30_best, "Localization (top-1 accuracy)"),
 ]:
-    x = np.arange(2)
+    x = np.arange(3)
     w = 0.19
     for i, (feat, color) in enumerate(zip(order, colors4)):
-        vals = [d5[feat], d14[feat]]
+        vals = [d5[feat], d14[feat], d30[feat]]
         offset = (i - 1.5) * w
         bars = ax.bar(x + offset, vals, width=w, color=color, zorder=3,
                        label=feat if ax is axes[0] else None)
         bar_labels(ax, bars, dy=0.02, fmt="{:.2f}")
     ax.set_xticks(x)
-    ax.set_xticklabels(["5-bus\n(n=300 test)", "IEEE 14-bus\n(4-seed mean)"])
+    ax.set_xticklabels(["5-bus\n(n=300 test)", "IEEE 14-bus\n(4-seed mean)", "IEEE 30-bus\n(1 run, n=300 test)"])
     ax.set_ylim(0, 1.15)
     ax.set_title(title, fontsize=11, color=INK, pad=10)
     style_axes(ax)
 
-axes[0].legend(frameon=False, loc="upper center", bbox_to_anchor=(1.1, 1.22), ncol=4, fontsize=8.8)
-fig.suptitle("Detection: topology never confidently ahead. Localization: topology-free wins at 5-bus, topology wins at 14-bus",
-             fontsize=10.5, color=INK, y=1.04)
+axes[0].legend(frameon=False, loc="upper center", bbox_to_anchor=(1.15, 1.22), ncol=4, fontsize=8.8)
+fig.suptitle("Detection: topology never confidently ahead, at any scale. Localization: topology-free wins at 5-bus; topology wins at both IEEE test systems",
+             fontsize=9.8, color=INK, y=1.04)
 fig.tight_layout()
 fig.savefig(FIGURES / "paper_fig4_scale_comparison.png", dpi=200, bbox_inches="tight")
 plt.close(fig)

@@ -59,8 +59,14 @@ fix is itself informative -- it suggests that specific mistake
 never actually topology-free) is an easy, general trap -- but, now
 confirmed, it does not mean topology never helps anywhere: it means
 the honest answer is task- and scale-specific, not a clean yes or no.
-(A third network, IEEE 30-bus, is in progress to test whether this
-exact pattern itself generalizes -- see `STATUS.md` §5.6.)
+
+A third network, IEEE 30-bus, reproduces both halves of this pattern
+closely in a single run (detection gap -0.006, localization gap
++0.020 -- both inside IEEE-14's own 4-seed range). Two independent
+standard IEEE test systems now agree with each other and disagree
+with this project's own small custom 5-bus microgrid -- see
+`STATUS.md` §5.6 for the full numbers and the honest caveat (this
+run isn't seed-replicated yet, unlike IEEE-14).
 
 Two further things, still true and still worth reporting plainly: the
 detector does **not** generalize to an attack type it never trained on
@@ -100,6 +106,12 @@ exploration/            Phases 2A-2P (01..20_*.py): microgrid model,
                        (confirmed at n=500, matching the 5-bus study's
                        own 300-scenario test-set size)
 29_paper_figures.py    Generates figures/paper_fig*.png from results/
+30_ieee14_multi_seed_replication.py  4-seed replication of 28, same
+                       pattern as 26 -- confirms the IEEE-14
+                       localization result isn't single-run noise
+31_ieee30_scale_replication.py  A third network (IEEE 30-bus), direct
+                       copy of 28 with the network swapped -- tests
+                       whether IEEE-14's pattern generalizes
 
 STATUS.md              Research log -- what was done, in what order,
                        every real number, every correction made along
@@ -199,13 +211,17 @@ the short version:
 - Bibliography: 41/57 sources verified in depth; a handful of
   IEEE Xplore/ACM-hosted sources couldn't be fetched at all (paywall)
   and need institutional access.
-- Scale: the IEEE 14-bus study (`28_ieee14_scale_replication.py`) is
-  confirmed at n=500 (300 test scenarios), matching the corrected
-  5-bus result's own test-set size, and independently confirms it: no
-  measurable topology-relational advantage there either, using an
-  unrelated feature-engineering design. Only two network topologies
-  have been tested; a third standard system (e.g. IEEE 30-bus) would
-  show whether this null result itself generalizes further.
+- Scale: three network topologies have now been tested. The IEEE
+  14-bus study (`28_ieee14_scale_replication.py`) is confirmed at
+  n=500 (300 test scenarios) across 4 independent seeds
+  (`30_ieee14_multi_seed_replication.py`): detection agrees with
+  5-bus (no measurable topology-relational advantage), but
+  localization shows a real, seed-robust reversal (`topology_fusion`
+  ahead by a small, sign-stable margin). IEEE 30-bus
+  (`31_ieee30_scale_replication.py`) reproduces both halves of that
+  pattern closely in a single run, but is not yet seed-replicated the
+  way IEEE-14 is -- that replication is the one piece of scale work
+  still open.
 - No target venue has formally accepted anything -- `paper/main.tex`
   is formatted for IEEE SmartGridComm as the best topical fit found,
   not a submission in progress.
