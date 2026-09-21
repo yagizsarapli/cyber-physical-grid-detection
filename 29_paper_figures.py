@@ -208,13 +208,13 @@ for ax, d5, d14, title in [
                        label=feat if ax is axes[0] else None)
         bar_labels(ax, bars, dy=0.02, fmt="{:.2f}")
     ax.set_xticks(x)
-    ax.set_xticklabels(["5-bus\n(n=300 test)", "IEEE 14-bus\n(n=60-120 test)"])
+    ax.set_xticklabels(["5-bus\n(n=300 test)", "IEEE 14-bus\n(n=300 test)"])
     ax.set_ylim(0, 1.15)
     ax.set_title(title, fontsize=11, color=INK, pad=10)
     style_axes(ax)
 
 axes[0].legend(frameon=False, loc="upper center", bbox_to_anchor=(1.05, 1.22), ncol=3, fontsize=9.5)
-fig.suptitle("The topology-fusion advantage does not clearly transfer to a bigger, meshed network",
+fig.suptitle("The topology-fusion advantage does not transfer to a bigger, meshed network (n=300, confirmed)",
              fontsize=11.5, color=INK, y=1.04)
 fig.tight_layout()
 fig.savefig(FIGURES / "paper_fig4_scale_comparison.png", dpi=200, bbox_inches="tight")

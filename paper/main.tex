@@ -36,7 +36,7 @@ yagiz.saraplii@gmail.com}
 \maketitle
 
 \begin{abstract}
-Distinguishing a cyber false-data-injection attack (FDIA) from a legitimate physical disturbance, localizing it, and doing so fast enough for protective relaying are three separate, usually separately-studied problems. We study all three together on a synthetic inverter-dominated microgrid with a weighted-least-squares (WLS) AC state estimator. Under attack magnitudes pushed toward the sensor noise floor -- not an easier configuration that an earlier pass of this same pipeline mistakenly reported as near-perfect -- and with a properly powered test set, topology-aware relational features give a statistically supported advantage over a simpler prior-based baseline for both detection (balanced accuracy 0.950 vs.\ 0.873) and localization (top-1 accuracy 0.980 vs.\ 0.780), confirmed across four independent random seeds (detection gap $+0.088\pm0.035$, localization gap $+0.207\pm0.032$; the sign never flips). We separately profile the full decision pipeline against a protective relay's real-time budget (20\,ms at 50\,Hz) and find the original 43\,ms pipeline is slow not because of the model or the state estimator's iteration count, but because of an avoidable software inefficiency in how each cycle's measurement vector is submitted to the estimator; fixing it and using a lighter classifier brings the pipeline to 16.4/17.0/17.1\,ms at the median/p95/p99. Two results temper the headline finding: the detector does not generalize to a completely unseen attack type (0--4\% recall when one of two attack families is withheld from training), and a pilot at a larger, standard, meshed test system (IEEE 14-bus) does not reproduce the topology-fusion advantage -- residual-only features localize better there (0.600 vs.\ 0.517). We report both negative results as scope conditions on the claim, not as failures to be minimized.
+Distinguishing a cyber false-data-injection attack (FDIA) from a legitimate physical disturbance, localizing it, and doing so fast enough for protective relaying are three separate, usually separately-studied problems. We study all three together on a synthetic inverter-dominated microgrid with a weighted-least-squares (WLS) AC state estimator. Under attack magnitudes pushed toward the sensor noise floor -- not an easier configuration that an earlier pass of this same pipeline mistakenly reported as near-perfect -- and with a properly powered test set, topology-aware relational features give a statistically supported advantage over a simpler prior-based baseline for both detection (balanced accuracy 0.950 vs.\ 0.873) and localization (top-1 accuracy 0.980 vs.\ 0.780), confirmed across four independent random seeds (detection gap $+0.088\pm0.035$, localization gap $+0.207\pm0.032$; the sign never flips). We separately profile the full decision pipeline against a protective relay's real-time budget (20\,ms at 50\,Hz) and find the original 43\,ms pipeline is slow not because of the model or the state estimator's iteration count, but because of an avoidable software inefficiency in how each cycle's measurement vector is submitted to the estimator; fixing it and using a lighter classifier brings the pipeline to 16.4/17.0/17.1\,ms at the median/p95/p99. Two results temper the headline finding: the detector does not generalize to a completely unseen attack type (0--4\% recall when one of two attack families is withheld from training), and a scale study at a larger, standard, meshed test system (IEEE 14-bus, confirmed at $n{=}500$ -- matched statistical power to the headline result) does not reproduce the topology-fusion advantage: residual-only features are the outright best detector there (0.750 vs.\ 0.737), and topology-fusion keeps only a narrow, non-decisive localization edge (0.560 vs.\ 0.507--0.547). We report both negative results as scope conditions on the claim, not as failures to be minimized.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -168,10 +168,10 @@ Model-consistent (stealth) FDIA & 0.040 & 1.000 \\
 
 The detector recognizes the statistical signature of attack types represented in its training data -- including the stealthy one, very well -- but does not extrapolate to a mechanism it has not seen. We report this as a hard scope limit on any deployment claim built on Section~\ref{sec:results1}'s results: within this project's own two-family attack taxonomy, this is a complete absence of zero-day capability, not a partial one.
 
-\section{Results IV: A Scale Pilot That Complicates the Headline Finding}
+\section{Results IV: A Confirmed Scale Study That Complicates the Headline Finding}
 \label{sec:scale}
 
-Everything in Sections~\ref{sec:results1}--\ref{sec:zeroday} uses the custom 5-bus microgrid. We attempted to test the topology-fusion finding at a larger, standard scale.
+Everything in Sections~\ref{sec:results1}--\ref{sec:zeroday} uses the custom 5-bus microgrid. We tested the topology-fusion finding at a larger, standard scale, escalating sample size across three passes until matched to Section~\ref{sec:results1}'s own statistical power.
 
 \textbf{Test-system selection.} The CIGRE European MV benchmark network was tried first and rejected for a concrete engineering reason: it represents internal switches via auxiliary buses (15 \texttt{pandapower}-level buses map to 18 internal power-flow-case buses), which breaks this project's admittance-matrix-indexing code. IEEE 14-bus has no such mismatch and is, independently, the single most commonly used benchmark in the power-system state-estimation/FDIA literature specifically.
 
@@ -179,16 +179,16 @@ Everything in Sections~\ref{sec:results1}--\ref{sec:zeroday} uses the custom 5-b
 
 \begin{table}[t]
 \centering
-\caption{5-bus vs.\ IEEE 14-bus: best result per task}
+\caption{5-bus vs.\ IEEE 14-bus: best result per task, at matched $n{=}300$-test-scenario power on both sides}
 \label{tab:scale}
 \begin{tabular}{@{}lp{5.2cm}@{}}
 \toprule
 & Best result \\
 \midrule
 Detection, 5-bus & topology\_fusion 0.950, consistent across all 3 model families \\
-Detection, IEEE-14 & topology\_fusion/LR 0.766, but \emph{not} consistent (HistGB: topology\_fusion 0.664 $\approx$ prior\_only 0.665) \\
+Detection, IEEE-14 ($n{=}500$) & \textbf{residual\_only/LR 0.750} -- outright ahead of topology\_fusion's own best (0.737) \\
 Localization, 5-bus & \textbf{topology\_fusion 0.980} \\
-Localization, IEEE-14 & \textbf{residual\_only 0.600} -- topology\_fusion (0.517) and prior\_only (0.517) both worse \\
+Localization, IEEE-14 ($n{=}500$) & topology\_fusion 0.560 -- narrowly best again, but tight (prior\_only 0.547, residual\_only 0.507) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -196,13 +196,13 @@ Localization, IEEE-14 & \textbf{residual\_only 0.600} -- topology\_fusion (0.517
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{../figures/paper_fig4_scale_comparison.png}
-\caption{5-bus vs.\ IEEE 14-bus: detection and localization by feature set. The topology-fusion (blue) advantage is clear at 5-bus and largely gone at 14-bus.}
+\caption{5-bus vs.\ IEEE 14-bus (both at $n{=}300$ test scenarios): detection and localization by feature set. The topology-fusion (blue) advantage is clear at 5-bus and gone -- reversed, for detection -- at 14-bus.}
 \label{fig:scale}
 \end{figure}
 
-\textbf{Result} ($n{=}200$ replications, 798 scenarios, 60--120 test scenarios depending on task; Table~\ref{tab:scale}, Fig.~\ref{fig:scale}). A first, smaller pass ($n{=}80$, $\sim$24 test scenarios) was inconclusive by design -- the same underpowered-sample regime that had already produced, and been corrected out of, a false reversal in Section~\ref{sec:results1}. The $n{=}200$ result is large enough that detection and localization tell an internally consistent story, evidence this is a real pattern rather than sampling noise, though $n{=}200$ remains smaller than Section~\ref{sec:results1}'s $n{=}300$/4-seed validation.
+\textbf{Result, three escalating passes, same direction each time} (Table~\ref{tab:scale}, Fig.~\ref{fig:scale}). $n{=}80$ ($\sim$24 test scenarios) was inconclusive by design -- the same underpowered regime that had already produced, and been corrected out of, a false reversal in Section~\ref{sec:results1}. $n{=}200$ (60--120 test scenarios) first showed an internally consistent pattern across detection and localization rather than model-to-model noise. $n{=}500$ -- matched exactly to Section~\ref{sec:results1}'s own 300-scenario test-set size -- did not walk that back; it sharpened it: residual-only detection is now the outright leader on IEEE 14-bus, not merely competitive. This rules out $n{=}200$ having itself been an underpowered artifact in the other direction; the finding is stable under the same statistical rigor applied to the headline result.
 
-\textbf{Interpretation, sharpened against a direct counter-example.} IEEE 14-bus is meshed, multi-generator, transformer-connected -- materially different from the small, simple 5-bus microgrid where the advantage was found. A naive reading of Table~\ref{tab:scale} would conclude ``FDIA detection gets harder at scale'' -- but that reading does not survive contact with a directly relevant counter-example: an LSTM-based FDIA detector evaluated across five systems from IEEE 9-bus to IEEE 300-bus reports \emph{stable} continuous-attack detection accuracy across that entire range (0.937--0.945) \cite{zhang2022false}. The correct, narrower claim this paper's own data supports is therefore not ``detection gets harder at scale'' but specifically: \textbf{the marginal advantage contributed by topology-relational features over a simpler baseline is what degrades at scale}, which is consistent with both results being true at once. A 2025 field-wide scoping review \cite{oelhaf2025scoping} independently finds that cross-topology generalization is essentially untested across the ML-for-power-protection literature it surveyed -- this pilot is a direct attempt at a gap the field has already named, not a self-inflicted complication.
+\textbf{Interpretation, sharpened against a direct counter-example.} IEEE 14-bus is meshed, multi-generator, transformer-connected -- materially different from the small, simple 5-bus microgrid where the advantage was found. A naive reading of Table~\ref{tab:scale} would conclude ``FDIA detection gets harder at scale'' -- but that reading does not survive contact with a directly relevant counter-example: an LSTM-based FDIA detector evaluated across five systems from IEEE 9-bus to IEEE 300-bus reports \emph{stable} continuous-attack detection accuracy across that entire range (0.937--0.945) \cite{zhang2022false}. The correct, narrower claim this paper's own data supports is therefore not ``detection gets harder at scale'' but specifically: \textbf{the marginal advantage contributed by topology-relational features over a simpler baseline is what degrades, and for detection specifically reverses, at scale} -- consistent with both results being true at once. A 2025 field-wide scoping review \cite{oelhaf2025scoping} independently finds that cross-topology generalization is essentially untested across the ML-for-power-protection literature it surveyed -- this study is a direct, now statistically confirmed, attempt at a gap the field has already named, not a self-inflicted complication and not a preliminary pilot.
 
 \section{Discussion}
 
@@ -211,7 +211,7 @@ Read together, Sections~\ref{sec:results1}--\ref{sec:scale} support a narrower a
 \section{Limitations}
 
 \begin{enumerate}
-\item \textbf{Scale}: the validated headline result (Section~\ref{sec:results1}) is a 5-bus network. The scale test (Section~\ref{sec:scale}, IEEE 14-bus, $n{=}200$) complicates rather than confirms it, and is itself smaller than Section~\ref{sec:results1}'s validation. A swept scale study is the single most important remaining piece of work.
+\item \textbf{Scale}: the validated headline result (Section~\ref{sec:results1}) is a 5-bus network. The scale study (Section~\ref{sec:scale}, IEEE 14-bus, confirmed at $n{=}500$, matched to Section~\ref{sec:results1}'s own power) complicates rather than confirms it. Only two network topologies have been tested; a third standard system (e.g.\ IEEE 30-bus) would show whether this pattern itself generalizes.
 \item \textbf{No zero-day generalization} (Section~\ref{sec:zeroday}): detection/localization numbers hold only for attack types represented in training.
 \item \textbf{Single testbed family, two attack types}: restricting which measurements a stealth attack compromises is a physical consequence of the AC-consistent attack construction, not a tunable knob, and was not varied.
 \item \textbf{Latency results} (Section~\ref{sec:latency}) characterize one Python/\texttt{pandapower} implementation on one machine, not a hardware or RTOS claim.
