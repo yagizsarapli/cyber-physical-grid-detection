@@ -39,9 +39,16 @@ reported as real findings, not hidden.
 ## Repository map
 
 ```
-01..20_*.py           Phases 2A-2P: microgrid model, inverter models,
-                       WLS state estimation, early cyber-vs-physical
-                       benchmarks (built before this session)
+exploration/            Phases 2A-2P (01..20_*.py): microgrid model,
+                       inverter models, WLS state estimation, early
+                       cyber-vs-physical benchmarks -- built before
+                       this session, kept as the record of how the
+                       current design was arrived at. Nothing in the
+                       paper depends on this folder except one shared
+                       module (exploration/01_microgrid_topology.py,
+                       loaded by 21_*.py below) -- it is not part of
+                       the paper pipeline otherwise.
+
 21_*_HARD.py           Attack generator, magnitude reduced toward the
                        sensor noise floor (this session's stress test)
 22_*_HARD.py/HARDER.py  Dataset generation on top of 21_*_HARD
@@ -83,7 +90,9 @@ snapshot of one step, and a `_FIXED`/`_HARD`/`_HARDER` suffix means
 original" -- the original is kept alongside it on purpose, as the
 record of what changed and why. `STATUS.md` narrates the actual
 sequence and reasoning; the file list alone won't make sense without
-it.
+it. The `exploration/` vs. root-level split follows the same logic at
+folder granularity: `exploration/` is "how we got here," root is "what
+the paper is."
 
 ## Reproducing this
 

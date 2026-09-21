@@ -104,7 +104,7 @@ def load_module(filename, module_name):
 
 
 topology = load_module(
-    "01_microgrid_topology.py",
+    "exploration/01_microgrid_topology.py",
     "topology",
 )
 

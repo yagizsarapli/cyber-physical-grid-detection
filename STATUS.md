@@ -49,7 +49,7 @@ overclaimed — see §4.
 
 ## Method
 
-- **Testbed**: `01_microgrid_topology.py` — 5 buses, 4 lines, fixed
+- **Testbed**: `exploration/01_microgrid_topology.py` — 5 buses, 4 lines, fixed
   roles (PCC, PV/GFL, load A, BESS/GFM, load B). `net.f_hz = 50.0`,
   `net.sn_mva = 0.1`.
 - **State estimation**: WLS via `pandapower.estimation.estimate`
