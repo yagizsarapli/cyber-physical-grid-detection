@@ -1,0 +1,8 @@
+# LaTeX build artifacts -- regenerate with:
+#   pdflatex main.tex && bibtex main && pdflatex main.tex && pdflatex main.tex
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+missfont.log

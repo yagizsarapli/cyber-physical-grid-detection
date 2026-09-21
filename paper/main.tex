@@ -6,6 +6,11 @@
 \usepackage{url}
 \usepackage{textcomp}
 \usepackage{xcolor}
+% BasicTeX's minimal install is missing the Courier (psnfss) TFM
+% metrics IEEEtran's default typography substitutes \texttt to. Force
+% Computer Modern Typewriter instead, which is always present -- pure
+% typography fallback, does not change any content.
+\renewcommand{\ttdefault}{cmtt}
 
 % Formatted for IEEE SmartGridComm (IEEE International Conference on
 % Communications, Control, and Computing Technologies for Smart

@@ -110,10 +110,31 @@ re-running should reproduce the numbers in `STATUS.md` and
 ## Building the paper
 
 `paper/main.tex` + `paper/references.bib` target `IEEEtran`
-(conference mode). Fastest path to a rendered PDF: drop both files
-into a new [Overleaf](https://overleaf.com) project (IEEEtran is
-built in, nothing to install). Figures are referenced as
-`../figures/paper_fig*.png`, relative to `paper/`.
+(conference mode) and compile cleanly -- `paper/main.pdf` in this repo
+*is* that compiled output, checked in so you don't have to build it
+just to read it.
+
+To rebuild locally (verified working with a BasicTeX install):
+
+```bash
+cd paper
+pdflatex -interaction=nonstopmode main.tex
+bibtex main
+pdflatex -interaction=nonstopmode main.tex
+pdflatex -interaction=nonstopmode main.tex
+```
+
+If `pdflatex` reports a missing `IEEEtran.cls`, install it once with
+`sudo tlmgr install ieeetran` (lowercase -- the CTAN package name).
+If you hit `Font ... pcrr7t ... not loadable` (BasicTeX's minimal
+install is missing the Courier metrics IEEEtran's typography wants),
+that's already worked around in `main.tex` via
+`\renewcommand{\ttdefault}{cmtt}` -- no action needed.
+
+No local LaTeX install: drop `main.tex` + `references.bib` into a new
+[Overleaf](https://overleaf.com) project (IEEEtran is built in).
+Figures are referenced as `../figures/paper_fig*.png`, relative to
+`paper/`.
 
 ## Status and what's not done yet
 
