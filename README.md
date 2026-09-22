@@ -10,7 +10,7 @@ Short answer: **no** -- once measured against a fair comparison, not
 the one we first ran. See below for what that means, how we caught
 our own mistake, and where to find the details.
 
-![5-bus vs. IEEE 14-bus: detection and localization by feature set](figures/paper_fig4_scale_comparison.png)
+![5-bus vs. IEEE 14-bus vs. IEEE 30-bus: detection and localization by feature set](figures/paper_fig4_scale_comparison.png)
 
 ## The headline result
 
@@ -32,11 +32,16 @@ residual/innovation quantities they compare (e.g.
 `neighbor_mean_residual`), so the original name-matching feature-set
 split let about half of them leak into what were meant to be
 topology-free baselines. Once fixed, the fair comparison is a
-near-exact tie for detection (0.950 vs. 0.950) and a **win for the
-topology-free ablation** at localization (0.993 vs. 0.980) -- across
-two independent stress conditions and all 4 seeds. **Combining
-residual and prior information explains the entire advantage; explicit
-topology-awareness adds nothing measurable on this testbed.**
+near-exact tie for detection (0.950 vs. 0.950) and, on the primary
+seed, a win for the topology-free ablation at localization (0.993 vs.
+0.980) -- across two independent stress conditions. The 4-seed mean
+tells the more honest story: both gaps are small, 0.3 percentage
+points either way (detection −0.003±0.010, sign unstable; localization
+−0.003±0.007, consistently but only narrowly favoring the topology-free
+side). **Combining residual and prior information explains the entire
+advantage; explicit topology-awareness adds nothing measurable on this
+testbed** -- but "adds nothing" here means a near-exact tie, not a
+one-sided rout in either direction.
 
 A separately-implemented, size-agnostic pipeline for a bigger,
 standard, meshed network (IEEE 14-bus, n=500 replications, 300 test
@@ -47,18 +52,20 @@ time, not a name-substring collision). Once corrected and confirmed
 across 4 independent seeds, the two networks agree on **detection**
 (`topology_fusion` never confidently ahead of the best non-relational
 alternative -- an exact tie at 5-bus, a consistent 4-seed deficit at
-IEEE-14) but **not on localization**: the topology-free ablation wins
-decisively at 5-bus, while `topology_fusion` keeps a small, 4-seed-robust
-lead at IEEE-14 (mean gap +0.018, range +0.013 to +0.033, sign never
-flipping). That's a real, replicated reversal, not noise on either
-side of it -- the one place in this whole project where explicit
-topology-relational features show a genuine advantage. Two
+IEEE-14) but **not on localization**: the topology-free ablation is
+narrowly but consistently ahead at 5-bus (mean gap −0.003±0.007), while
+`topology_fusion` keeps a comparably small but oppositely-signed,
+4-seed-robust lead at IEEE-14 (mean gap +0.018, range +0.013 to +0.033,
+sign never flipping). Neither gap is large -- what's real is the
+*direction* reversing between the two networks, not a big effect at
+either one -- the one place in this whole project where explicit
+topology-relational features show a genuine, if modest, advantage. Two
 independently-written pipelines needing the identical feature-definition
 fix is itself informative -- it suggests that specific mistake
 (comparing a topology-rich feature set against baselines that were
 never actually topology-free) is an easy, general trap -- but, now
 confirmed, it does not mean topology never helps anywhere: it means
-the honest answer is task- and scale-specific, not a clean yes or no.
+the honest answer is task- and network-specific, not a clean yes or no.
 
 A third network, IEEE 30-bus, looked in a single run like it
 reproduced both halves of this pattern too (detection gap -0.006,

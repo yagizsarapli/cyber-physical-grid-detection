@@ -47,8 +47,9 @@ a second null result**: topology-fusion keeps a small but consistent
 lead (mean gap +0.018, range +0.013 to +0.033, never flipping sign).
 Read together with §2.5, this is not "the same null result twice" —
 it's "detection: the same null result twice; localization: a genuine,
-replicated, scale-dependent reversal" — a more complicated and more
-interesting answer than either a clean yes or a clean no. **A third
+replicated reversal at IEEE-14 specifically" — a more complicated and
+more interesting answer than either a clean yes or a clean no, and
+(see below) not simply a function of scale either. **A third
 network (IEEE 30-bus, §5.6) looked, in a single run, like it confirmed
 this pattern too — it doesn't, once replicated the same way.** Re-run
 across the same 4 seeds used at IEEE-14, neither gap holds a consistent
@@ -447,7 +448,7 @@ run, per this project's own established rule):
 
 Sign never flips in either direction, across any seed.
 
-**Honest reading, updated three times now.** First pass (before §2.5):
+**Honest reading, updated four times now.** First pass (before §2.5):
 "topology helps at 5-bus, not at 14-bus — scale-dependent." Second
 pass (after §2.5, before the §5 fix): "topology never helped at 5-bus
 either — 14-bus independently confirms a null result, and wasn't
@@ -460,14 +461,22 @@ checked with the same rigor at both scales: **detection agrees
 cleanly at both scales** (topology_fusion never ahead of the best
 non-relational alternative — an exact tie at 5-bus, a consistent
 4-seed deficit at 14-bus). **Localization does not agree, and this is
-now a confirmed, not a suspected, reversal**: the topology-free
-ablation wins decisively at 5-bus (0.993 vs. 0.980); topology_fusion
-keeps a small but 4-seed-robust lead at IEEE-14 (mean gap +0.018,
-never flipping sign). This is the one place in the whole project where
-topology-relational features show a real, replicated advantage — and
-it only survived because the same "don't trust one run" discipline
-that caught the original n=72 false reversal (§2) was applied here
-too, rather than accepting the single-run "probably noise" read.
+now a confirmed, not a suspected, reversal** — but the 5-bus side of
+it is smaller than it looks from the single primary-seed numbers
+alone: those are 0.993 vs. 0.980 (a "decisive"-looking 1.3-point gap),
+but the 4-seed mean gap is only −0.003 ± 0.007 (0.3 points, topology
+never ahead across the 4 seeds but only barely behind). So the fourth
+correction: **the topology-free ablation is consistently but only
+narrowly ahead at 5-bus, not "decisively" ahead** — while
+topology_fusion keeps a comparably-sized but oppositely-signed lead at
+IEEE-14 (mean gap +0.018, never flipping sign). Both are small; what's
+real is the *direction* reversing between the two networks, not a
+large effect at either one. This is the one place in the whole project
+where topology-relational features show a real, replicated advantage
+— and it only survived because the same "don't trust one run"
+discipline that caught the original n=72 false reversal (§2) was
+applied here too, rather than accepting the single-run "probably
+noise" read.
 
 That the residual_only/prior_only feature-definition bug was made
 independently in two separately-written pipelines remains worth
@@ -643,10 +652,12 @@ line of work in the smart-grid cybersecurity literature generally.
 1. **Detection shows no topology-specific advantage at any of the
    three scales tested, confirmed across 4 seeds at each** (§2.5, §5,
    §5.6), using two unrelated feature-engineering implementations.
-   **Localization is different, and scale-specific rather than
+   **Localization is different, and network-specific rather than
    uniform: a real, 4-seed-confirmed reversal at IEEE-14 only** — the
-   topology-free ablation wins decisively at 5-bus, topology-fusion
-   keeps a small but consistent lead at IEEE-14 (§5), and a third
+   topology-free ablation is narrowly but consistently ahead at 5-bus
+   (mean gap −0.003±0.007, not the "decisive"-looking 0.993 vs. 0.980
+   the single primary-seed numbers alone suggest), topology-fusion
+   keeps a comparably small but consistent lead at IEEE-14 (§5), and a third
    network (IEEE 30-bus, §5.6), re-tested across the same 4 seeds
    after an initial single run looked like it matched IEEE-14, shows
    no stable direction either way. Whether that makes IEEE-14 the
