@@ -457,8 +457,8 @@ Third pass (after the §5 fix, single IEEE-14 run): "no feature set is
 confidently ahead of the topology-free ablation at either scale" —
 wrong too, just not caught until the multi-seed re-run above. The
 correct reading, now that detection and localization have each been
-checked with the same rigor at both scales: **detection agrees
-cleanly at both scales** (topology_fusion never ahead of the best
+checked with the same rigor at both networks: **detection agrees
+cleanly at both networks** (topology_fusion never ahead of the best
 non-relational alternative — an exact tie at 5-bus, a consistent
 4-seed deficit at 14-bus). **Localization does not agree, and this is
 now a confirmed, not a suspected, reversal** — but the 5-bus side of
@@ -743,7 +743,7 @@ recur).
    in `paper/main.tex` §VIII's Discussion was wrong; corrected there to
    report this directly instead of leaving it as untested speculation.
    Current best guess (also now in §VIII, explicitly flagged as a
-   guess, not verified): the redundancy is present at both scales, but
+   guess, not verified): the redundancy is present at both networks, but
    whether a tree-based classifier with no built-in graph structure
    can actually *find* the right subset of a flat, unstructured
    28-column input to combine for each node may get harder as the
