@@ -911,9 +911,27 @@ looking at this file: its classifier was a bare, default-hyperparameter
 (`max_iter=300, learning_rate=0.06, max_leaf_nodes=15, l2_regularization=1.0`)
 that `23_topology_aware_cyber_physical_localization_HARD.py` actually reports
 as "the" 5-bus detector -- now matched, so the zero-day result describes the
-same detector's generalization, not an unrelated, unconfigured one. **Not
-yet re-run** -- the corrected 0--4% recall numbers in the paper need
-re-verifying against this fixed script before they're cited again.
+same detector's generalization, not an unrelated, unconfigured one.
+
+**Re-run, and the finding survives essentially unchanged.** Both
+`topology_fusion` and `residual_plus_prior`, both held-out attack types,
+evaluated on the now-symmetric test-only split (n=75 per condition, half
+the old validation+test n since only "test" counts now):
+
+| Feature set | Held-out type | Held-out recall | Seen-in-training recall |
+|---|---|---|---|
+| topology_fusion | naive | 0.000 | 0.907 |
+| topology_fusion | model-consistent | 0.013 | 1.000 |
+| residual_plus_prior | naive | 0.000 | 0.907 |
+| residual_plus_prior | model-consistent | 0.013 | 1.000 |
+
+0-1.3% held-out recall vs. 91-100% seen-in-training -- matches the paper's
+existing "0-4% recall, vs. 89-100% when that type is in training" claim
+almost exactly, despite fixing both the evaluation-split asymmetry and the
+classifier-configuration mismatch. Unlike items 1/2/3/5 above, this is one
+of the few audit findings that does **not** change the paper's story at
+all -- the zero-day generalization failure was real, and remains real,
+under a properly matched comparison.
 
 **Item 4 (latency benchmark) -- fixed and verified the timing conclusion is
 unchanged.** `24_realtime_latency_benchmark_FINAL.py`'s classifier used to be
