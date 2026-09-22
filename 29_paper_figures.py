@@ -112,7 +112,7 @@ for ax, metric, title in [
 
 fig.suptitle("Residual+prior fusion matches topology_fusion; both beat prior_only alone (4 seeds, 5-bus)",
              fontsize=11, color=INK, y=1.03)
-fig.text(0.5, -0.02, "Bars: mean ± std across 4 seeds. Dots: individual seed results. n=300 test scenarios/seed.",
+fig.text(0.5, -0.02, "Bars: mean ± std across 4 seeds. Dots: individual seed results. n=300 detection / n=150 cyber-only localization test scenarios per seed.",
           ha="center", fontsize=8.5, color=INK_MUTED)
 fig.tight_layout()
 fig.savefig(FIGURES / "paper_fig1_multiseed_advantage.png", dpi=200, bbox_inches="tight")
@@ -252,9 +252,9 @@ colors4 = [BLUE, AQUA, ORANGE, INK_SECONDARY]
 
 fig, axes = plt.subplots(1, 2, figsize=(11, 4.4))
 
-for ax, d5, d14, d30, title in [
-    (axes[0], det5, det14_best, det30_best, "Detection (balanced accuracy)"),
-    (axes[1], loc5, loc14_best, loc30_best, "Localization (top-1 accuracy)"),
+for ax, d5, d14, d30, title, n5_label in [
+    (axes[0], det5, det14_best, det30_best, "Detection (balanced accuracy)", "n=300 test"),
+    (axes[1], loc5, loc14_best, loc30_best, "Localization (top-1 accuracy)", "n=150 test"),
 ]:
     x = np.arange(3)
     w = 0.19
@@ -265,13 +265,13 @@ for ax, d5, d14, d30, title in [
                        label=feat if ax is axes[0] else None)
         bar_labels(ax, bars, dy=0.02, fmt="{:.2f}")
     ax.set_xticks(x)
-    ax.set_xticklabels(["5-bus\n(n=300 test)", "IEEE 14-bus\n(4-seed mean)", "IEEE 30-bus\n(4-seed mean)"])
+    ax.set_xticklabels([f"5-bus\n({n5_label})", "IEEE 14-bus\n(4-seed mean)", "IEEE 30-bus\n(4-seed mean)"])
     ax.set_ylim(0, 1.15)
     ax.set_title(title, fontsize=11, color=INK, pad=10)
     style_axes(ax)
 
 axes[0].legend(frameon=False, loc="upper center", bbox_to_anchor=(1.15, 1.22), ncol=4, fontsize=8.8)
-fig.suptitle("Detection: topology never confidently ahead, at any scale. Localization: topology-free wins at 5-bus; topology wins at IEEE-14 only, not (yet) at IEEE-30",
+fig.suptitle("Detection: topology never confidently ahead, at any network. Localization: topology-free wins at 5-bus; topology wins at IEEE-14 only, not (yet) at IEEE-30",
              fontsize=9.8, color=INK, y=1.04)
 fig.tight_layout()
 fig.savefig(FIGURES / "paper_fig4_scale_comparison.png", dpi=200, bbox_inches="tight")

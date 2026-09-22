@@ -131,10 +131,10 @@ genuine reversal: prior_only (bal-acc 0.903) beat topology_fusion
 (300 test scenarios, 4x the statistical power) shows it was sampling
 noise, not a real effect:
 
-| | Original (easy, n=72) | Hard (n=72) | **Hard (n=300)** | **Harder: +2x forecast noise (n=300)** |
+| | Original (easy, n=72 det.) | Hard (n=72 det.) | **Hard (n=300 det.)** | **Harder: +2x forecast noise (n=300 det.)** |
 |---|---|---|---|---|
 | Best detection (bal-acc) | topology_fusion 1.000 | prior_only 0.903 | **topology_fusion 0.950** (prior_only 0.873) | **topology_fusion 0.953** (prior_only 0.83–0.90) |
-| Best localization (top-1) | topology_fusion 1.000 | topology_fusion 1.000 | **topology_fusion 0.980** (prior_only 0.780) | **topology_fusion 0.980** (prior_only 0.767) |
+| Best localization (top-1, n=36/150/150 loc. resp.) | topology_fusion 1.000 | topology_fusion 1.000 | **topology_fusion 0.980** (prior_only 0.780) | **topology_fusion 0.980** (prior_only 0.767) |
 | Clean-data false-alarm rate | 0.0 | 0.28–0.50 | 0.067 | ~0.03–0.19 |
 
 95% bootstrap CI for the best detector at n=300 (hard):
@@ -428,7 +428,7 @@ Fixed identically to §2.5: relational/degree columns excluded from
 
 **Corrected n=500 result** (best model per feature set, single run):
 
-| | 5-bus (n=300 test) | **IEEE 14-bus, n=500 (corrected, single run)** |
+| | 5-bus (n=300 det./n=150 loc. test) | **IEEE 14-bus, n=500 (corrected, single run)** |
 |---|---|---|
 | Detection | topology_fusion 0.950 = residual_plus_prior 0.950 | residual_only/LR **0.750** best; residual_plus_prior 0.743, topology_fusion 0.737 close behind — neither the ablation nor topology_fusion leads |
 | Localization | residual_plus_prior **0.993** > topology_fusion 0.980 | topology_fusion **0.560**, narrowly ahead of residual_only/prior_only (0.547) and residual_plus_prior (0.533) |
