@@ -79,10 +79,23 @@ def fit_eval(df, feat_cols, train_mask, test_mask, test_label, feature_set):
     X_test = df.loc[test_mask, feat_cols]
     y_test = df.loc[test_mask, "is_cyber"]
 
+    # FIX (caught in post-submission audit, STATUS.md Sec. 6 item 9,
+    # continued): this used to be a bare, default-hyperparameter HGB,
+    # different from the tuned model 23_topology_aware_cyber_physical_
+    # localization_HARD.py actually reports as "the" detector
+    # (max_iter=300, learning_rate=0.06, max_leaf_nodes=15,
+    # l2_regularization=1.0). The zero-day result should describe the
+    # same detector's generalization, not a different, unconfigured one.
     clf = Pipeline([
-        ("impute", SimpleImputer()),
+        ("impute", SimpleImputer(strategy="median")),
         ("scale", StandardScaler()),
-        ("model", HistGradientBoostingClassifier(random_state=RANDOM_STATE)),
+        ("model", HistGradientBoostingClassifier(
+            max_iter=300,
+            learning_rate=0.06,
+            max_leaf_nodes=15,
+            l2_regularization=1.0,
+            random_state=RANDOM_STATE,
+        )),
     ])
     clf.fit(X_train, y_train)
     pred = clf.predict(X_test)
@@ -113,10 +126,17 @@ def main():
                 (df["dataset_split"] == "train")
                 & (df["case"] != held_out)
             )
-            # Test on ALL rows of the held-out type not used anywhere in
-            # training (train split only excludes it, so validation+test
-            # rows of this type are fair, unseen test material).
-            test_mask = (df["case"] == held_out) & (df["dataset_split"] != "train")
+            # FIX (caught in post-submission audit, STATUS.md Sec. 6
+            # item 9): this used to be dataset_split != "train"
+            # (validation+test combined), while the seen-in-training
+            # reference below evaluates on dataset_split == "test"
+            # only -- an apples-to-oranges comparison (different
+            # evaluation-set composition, not just different training
+            # data). Both conditions now evaluate on the same "test"
+            # split; validation+test rows of the held-out type were
+            # fair, unseen material either way, but comparing the two
+            # recall numbers requires the denominator to match too.
+            test_mask = (df["case"] == held_out) & (df["dataset_split"] == "test")
 
             r = fit_eval(df, feat_cols, train_mask, test_mask,
                          f"held_out:{held_out}", feature_set)

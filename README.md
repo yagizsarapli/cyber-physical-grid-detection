@@ -176,6 +176,7 @@ automatically, gitignored). A reasonable path through the numbered
 scripts, in the order this session actually ran them:
 
 ```bash
+python3 exploration/08_multirate_operating_dataset.py   # generates data/phase2e_7day_operating_dataset.csv, required by every script below -- run this first on a clean clone
 python3 22_graph_ready_protected_prior_telemetry_HARD.py --n-rep 500
 python3 23_topology_aware_cyber_physical_localization_HARD.py
 python3 26_multi_seed_replication.py          # ~15-20 min, 4 full reruns

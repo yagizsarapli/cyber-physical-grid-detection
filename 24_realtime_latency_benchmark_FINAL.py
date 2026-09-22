@@ -101,17 +101,86 @@ def main():
     node_ids = sorted(int(b) for b in net.bus.index)
     load_buses = [int(net.gridra["bus_load_a"]), int(net.gridra["bus_load_b"])]
 
+    # FIX (post-submission audit, Sec. 6 item 4, continued): "innov"
+    # below used to be |va_hat - va_true| -- va_true is the same kind
+    # of oracle-only ground truth as vm_true, not something a deployed
+    # system has. Everywhere else in this project (22/28/31_*.py),
+    # "innovation" compares the WLS estimate to an independently-drawn
+    # PRIOR/forecast, not to ground truth -- built the same way here:
+    # a separate prior_net solved from the same context with a small,
+    # independent load-forecast error (2.5%, matching the 5-bus
+    # convention in 22_graph_ready_protected_prior_telemetry_HARD.py).
+    prior_net = topology.build_microgrid()
+    prior_context = slow.iloc[0].copy()
+    prior_context["load_a_p_mw"] = float(prior_context["load_a_p_mw"]) * (
+        1.0 + float(np.clip(rng.normal(0.0, 0.025), -0.06, 0.06))
+    )
+    prior_context["load_b_p_mw"] = float(prior_context["load_b_p_mw"]) * (
+        1.0 + float(np.clip(rng.normal(0.0, 0.025), -0.06, 0.06))
+    )
+    phase21.configure_context(prior_net, prior_context)
+    phase21.solve_truth(prior_net)
+    _, va_prior = phase21.truth_state(prior_net)
+
     phase21.add_measurement_vector(net, np.ones(len(stds)), stds)
 
+    # FIX (caught in post-submission audit, STATUS.md Sec. 6 item 4):
+    # this used to fit LogisticRegression on X_dummy/y_dummy -- pure
+    # random noise and random labels, so clf.predict() below exercised
+    # the right *computational graph* (same feature count, same model
+    # class) but was not a real detector by any definition. Warm-up
+    # trials below generate genuine clean/attack scenarios through this
+    # same pipeline and extract real (feature, label) pairs, so the
+    # classifier that gets timed has actually learned something.
+    # (Prediction is a fixed-size dot product + sigmoid either way, so
+    # this does not change pred_ms -- verified by re-running before vs.
+    # after this fix -- but "trained on nothing" was never defensible
+    # regardless of whether it moved the number.)
+    N_WARMUP = 150
+    warmup_rows, warmup_labels = [], []
+    for _ in range(N_WARMUP):
+        wu_target = int(rng.choice(load_buses))
+        wu_vm_true, wu_va_true = phase21.truth_state(net)
+        wu_h_true = phase21.h_ac(model, wu_vm_true, wu_va_true)
+        wu_noise = rng.normal(0.0, 1.0, size=len(stds))
+        wu_z_clean = wu_h_true + stds * wu_noise
+        is_attack = bool(rng.integers(0, 2))
+        wu_z_used = wu_z_clean
+        if is_attack:
+            wu_z_used, _, _ = phase21.apply_model_consistent_attack(
+                wu_z_clean, wu_h_true, model, wu_vm_true, wu_va_true, wu_target, rng
+            )
+        net.measurement["value"] = np.asarray(wu_z_used, dtype=float)
+        wu_success = bool(phase21.estimate(
+            net, algorithm="wls", init="flat",
+            tolerance=1e-4, maximum_iterations=10,
+            calculate_voltage_angles=True,
+        ))
+        if not wu_success:
+            continue
+        wu_vm_hat, wu_va_hat = phase21.estimated_state(net)
+        # Same deployable-residual fix as 28_ieee14_scale_replication.py/
+        # 31_ieee30_scale_replication.py: z - h(x_hat), not vm_hat - vm_true.
+        wu_h_hat = phase21.h_ac(model, wu_vm_hat, wu_va_hat)
+        wu_norm_res = np.abs((np.asarray(wu_z_used, dtype=float) - wu_h_hat) / stds)[: len(wu_vm_hat)]
+        wu_innov = np.abs(wu_va_hat - va_prior)
+        wu_feats = timed_feature_step(node_ids, adjacency, wu_norm_res, wu_innov)
+        warmup_rows.append([wu_feats[k] for k in sorted(wu_feats)])
+        warmup_labels.append(int(is_attack))
+
     n_feat = len(timed_feature_step(node_ids, adjacency, np.zeros(5), np.zeros(5)))
-    X_dummy = rng.normal(size=(200, n_feat))
-    y_dummy = rng.integers(0, 2, size=200)
+    X_train = np.array(warmup_rows) if warmup_rows else rng.normal(size=(200, n_feat))
+    y_train = np.array(warmup_labels) if warmup_rows else rng.integers(0, 2, size=200)
     clf = Pipeline([
         ("impute", SimpleImputer()),
         ("scale", StandardScaler()),
         ("model", LogisticRegression(max_iter=1000)),
     ])
-    clf.fit(X_dummy, y_dummy)
+    clf.fit(X_train, y_train)
+    print(f"Warm-up: {len(warmup_labels)} real scenarios "
+          f"({sum(warmup_labels)} attack, {len(warmup_labels) - sum(warmup_labels)} clean), "
+          f"train balanced accuracy = "
+          f"{float(np.mean(clf.predict(X_train) == y_train)):.3f}")
 
     wls_ms, feat_ms, pred_ms, total_ms = [], [], [], []
     n_fail = 0
@@ -140,8 +209,14 @@ def main():
             continue
 
         vm_hat, va_hat = phase21.estimated_state(net)
-        norm_res = np.abs(vm_hat - vm_true) / (stds[: len(vm_hat)] + 1e-9)
-        innov = np.abs(va_hat - va_true)
+        # FIX (post-submission audit, Sec. 6 item 4): deployable
+        # residual z - h(x_hat), not vm_hat - vm_true (oracle). Same
+        # arithmetic shape/cost as before, so this does not affect the
+        # feature_computation timing -- the fix is about what the
+        # numbers mean, not the stopwatch.
+        h_hat = phase21.h_ac(model, vm_hat, va_hat)
+        norm_res = np.abs((np.asarray(z_used, dtype=float) - h_hat) / stds)[: len(vm_hat)]
+        innov = np.abs(va_hat - va_prior)
 
         t2 = time.perf_counter()
         feats = timed_feature_step(node_ids, adjacency, norm_res, innov)

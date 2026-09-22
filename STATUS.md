@@ -872,6 +872,142 @@ Conclusion, Limitations, figures) is explicitly left for a future session,
 once items 4/6/7/8/9/10 are either also fixed or deliberately deferred with
 their own honest caveats.
 
+### Update, same day: items 4, 6, and 9 also fixed and verified; item 8's
+### script now exists
+
+Continuing directly from the fixes above, in the same session.
+
+**Item 6 (README reproduction path) -- fixed and verified end-to-end.**
+`exploration/08_multirate_operating_dataset.py` had `ROOT = Path(__file__)
+.resolve().parent` used for *both* finding its sibling script
+(`01_microgrid_topology.py`, correctly in `exploration/`) *and* its output
+paths (incorrectly `exploration/data/` instead of root `data/`, which is
+what 21/22/24/25 actually read). Split into `ROOT` (unchanged, still used
+for `load_module()`) and a new `PROJECT_ROOT = ROOT.parent` for
+`DATA`/`RESULTS`/`FIGURES`. Re-running it after the fix hit a second,
+unrelated bug (`load_a_p[spike_start:spike_stop] += 0.020` raised
+`TypeError: Index does not support mutable operations` -- `load_multiplier()`'s
+return value is apparently a pandas `Index`, not a plain array, in the
+currently-installed pandas/numpy combination), fixed by wrapping the load
+arrays in `np.asarray(..., dtype=float)`. With both fixed, the generator now
+runs to completion and writes to the correct root-level `data/`/`results/`/
+`figures/` -- confirmed by timestamp and by checking the saved file's path
+directly, not just exit code. `RNG = np.random.default_rng(20260811)` is a
+fixed seed, so this is a real, deterministic regeneration, not new data
+drawn from thin air (the existing `data/phase2e_7day_operating_dataset.csv`,
+dated Aug 11 -- the same date as its own seed -- was almost certainly
+produced by an earlier, differently-invoked run of this same generator, not
+manually placed). Also added the missing first step to `README.md`'s
+reproduction command list.
+
+**Item 9 (zero-day protocol asymmetry) -- fixed.**
+`27_held_out_attack_type_generalization.py`'s held-out condition evaluated
+on `dataset_split != "train"` (validation+test) while the seen-in-training
+reference evaluated on `dataset_split == "test"` only; changed the held-out
+condition to `== "test"` too, so both conditions' recall numbers share the
+same evaluation-set composition. Also fixed a second asymmetry noticed while
+looking at this file: its classifier was a bare, default-hyperparameter
+`HistGradientBoostingClassifier`, different from the tuned configuration
+(`max_iter=300, learning_rate=0.06, max_leaf_nodes=15, l2_regularization=1.0`)
+that `23_topology_aware_cyber_physical_localization_HARD.py` actually reports
+as "the" 5-bus detector -- now matched, so the zero-day result describes the
+same detector's generalization, not an unrelated, unconfigured one. **Not
+yet re-run** -- the corrected 0--4% recall numbers in the paper need
+re-verifying against this fixed script before they're cited again.
+
+**Item 4 (latency benchmark) -- fixed and verified the timing conclusion is
+unchanged.** `24_realtime_latency_benchmark_FINAL.py`'s classifier used to be
+fit on `X_dummy`/`y_dummy` (pure random noise and random labels); its
+feature computation used `vm_true`/`va_true` for both the "residual" and
+"innovation" quantities (the latter not previously flagged explicitly, found
+while reading the file to fix the former -- comparing the WLS estimate to
+ground truth and calling it "innovation" has the same oracle-leakage problem
+as the residual one, and is inconsistent with how "innovation" is defined
+everywhere else in this project, i.e. estimate-vs-independent-prior, not
+estimate-vs-truth). Fixed by: (a) running 150 warm-up trials through the
+same simulated pipeline (mix of clean/attack scenarios) to get real
+(feature, label) pairs to train on, instead of noise; (b) computing the
+residual as `z - h(x_hat)` (matching the fix already applied to
+28/31_*.py); (c) building a genuinely independent `prior_net` (same context,
+independently-drawn 2.5% load-forecast error, matching the 5-bus
+convention) once, and using its state for the innovation comparison instead
+of `va_true`.
+
+Re-ran the benchmark twice -- once (by mistake) while the IEEE-14
+regeneration job above was still running in the background, and once in
+true isolation as this script's own header comment requires ("no other
+heavy background jobs"). The contaminated run showed clearly elevated tail
+latency (p95 20.1ms, p99 24.1ms, both over budget, max 89.5ms) --
+**discarded**, not reported, specifically because it violates this
+project's own established discipline about not trusting a measurement taken
+under conditions the method itself warns against. The isolated re-run:
+
+| Stage | median | p95 | p99 | max |
+|---|---|---|---|---|
+| WLS state estimation | 16.63 | 17.31 | 18.11 | 81.10 |
+| Feature computation | 0.087 | 0.090 | 0.096 | 0.125 |
+| Model inference | 0.192 | 0.214 | 0.220 | 0.262 |
+| **TOTAL** | **16.91** | **17.59** | **18.41** | **81.41** |
+
+Median/p95/p99 all within the 20ms budget -- essentially unchanged from the
+paper's existing 16.4/17.0/17.1ms claim, exactly as predicted before
+re-running it: `pred_ms` and `feat_ms` are wall-clock time for a
+fixed-size computation (dot-product-plus-sigmoid; mean/max/subtraction over
+a fixed-length array respectively), which does not depend on whether the
+classifier was meaningfully trained or whether the residual used real vs.
+oracle values -- only on the array/model *size*, which is unchanged. The
+single-outlier max jumped from 21.3ms (paper) to 81.4ms (this run) -- also
+not attributable to the fix (nothing touched by it affects `wls_ms`
+timing); almost certainly ordinary tail-latency variance in the state
+estimator's own solve time, the same phenomenon the paper's own text already
+attributes the (smaller) original outlier to. **The corrected script closes
+the "not a real detector" objection with the timing conclusion intact** --
+warm-up training balanced accuracy on real data was 1.000 (150 scenarios,
+83 attack/67 clean), confirming the classifier is now actually detecting
+something, not just exercising a random weight vector.
+
+**Item 8 (missing R² redundancy script) -- written, run, and it holds up.**
+New script, `33_feature_redundancy_diagnostic.py`: 5-fold cross-validated
+out-of-fold Ridge regression (alpha=1.0), predicting each explicit
+topology-relational column from the full non-relational (`residual_plus_prior`)
+feature vector, matching the paper's own described method as closely as
+possible. Reuses each network's own feature-set-defining function
+(`feature_columns()` from `23_..._HARD.py` for 5-bus; a pivoted version of
+`28_ieee14_scale_replication.py`'s per-node relational columns for IEEE-14)
+rather than re-deriving column lists independently, specifically to avoid
+building a second, independent version of the exact feature-leakage bug
+this whole audit is about.
+
+| | 5-bus (new, reproducible) | 5-bus (paper, uncommitted) | IEEE-14 (new, reproducible, primary seed 20260921) | IEEE-14 (paper, uncommitted) |
+|---|---|---|---|---|
+| mean R² | 0.950 | 0.960 | 0.966 | 0.959 |
+| median R² | 1.000 | 1.000 | 0.999 | 0.996 |
+| min R² | 0.390 | 0.652 | 0.677 | (not stated) |
+| % above 0.8 | 87.7% | 91% | 91.7% | 96% |
+
+Close to, but not identical to, the paper's existing (previously
+unreproducible) numbers -- expected, since those were never backed by
+committed code and were almost certainly computed with different exact
+settings (fold count/alpha/random state all unspecified in the paper text).
+**The qualitative conclusion the paper actually rests on is intact and, if
+anything, slightly stronger**: both networks show high linear redundancy
+(mean/median both ~0.95-1.00), and IEEE-14 is not less redundant than
+5-bus -- 0.966 vs. 0.950, IEEE-14 slightly *higher* now, reinforcing rather
+than weakening the Discussion's "redundancy hypothesis does not explain the
+[localization] reversal" finding. The paper's specific 0.960/0.959 numbers
+should be replaced with 0.950/0.966 (or whatever this script reports at the
+time of the eventual rewrite) so the Acknowledgment's reproducibility claim
+is actually true for these two numbers.
+
+**Still open**: item 7 (SNR/prior mismatch) -- no code changes made;
+documented as a limitation to state honestly in the eventual rewrite rather
+than a redesign-and-rerun, since standardizing the noise model across three
+very differently-scaled networks is a real experimental-design decision, not
+a bug fix, and re-running all three networks a third time was judged not
+worth it for a robustness question the paper can instead disclose directly.
+Item 10 (GFL/GFM wording) and the statistical-language precision note are
+also still wording-only, deferred to the same rewrite.
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,

@@ -4,10 +4,20 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-ROOT = Path(__file__).resolve().parent
-DATA = ROOT / "data"
-RESULTS = ROOT / "results"
-FIGURES = ROOT / "figures"
+ROOT = Path(__file__).resolve().parent  # exploration/ -- sibling scripts (01_microgrid_topology.py) live here
+# FIX (caught in post-submission audit, STATUS.md Sec. 6 item 6): DATA/
+# RESULTS/FIGURES used to be ROOT/"data" etc., i.e. exploration/data/
+# -- but 21/22/24/25_*.py (root-level, the actual paper pipeline) read
+# data/phase2e_7day_operating_dataset.csv from the project root, not
+# from exploration/. A clean clone following README's documented
+# reproduction steps got FileNotFoundError on the very first command
+# as a result. Output paths now correctly target the project root;
+# ROOT itself is unchanged since load_module() below still needs it
+# to find 01_microgrid_topology.py.
+PROJECT_ROOT = ROOT.parent
+DATA = PROJECT_ROOT / "data"
+RESULTS = PROJECT_ROOT / "results"
+FIGURES = PROJECT_ROOT / "figures"
 DATA.mkdir(exist_ok=True)
 RESULTS.mkdir(exist_ok=True)
 FIGURES.mkdir(exist_ok=True)
@@ -214,8 +224,16 @@ def run():
     load_a_mult = load_multiplier(index, household_shift=0.0)
     load_b_mult = load_multiplier(index, household_shift=0.6)
 
-    load_a_p = LOAD_A_BASE_MW * load_a_mult
-    load_b_p = LOAD_B_BASE_MW * load_b_mult
+    # FIX (caught in post-submission audit, STATUS.md Sec. 6 item 6,
+    # found while testing the reproduction path): load_multiplier()'s
+    # return value ends up as a pandas Index in the currently-installed
+    # pandas/numpy combination (via index.hour/index.minute, which are
+    # Index-typed), not a plain ndarray -- Index doesn't support
+    # in-place item assignment, so the += below raised TypeError.
+    # np.asarray() here guarantees a mutable array regardless of what
+    # upstream operations return.
+    load_a_p = np.asarray(LOAD_A_BASE_MW * load_a_mult, dtype=float)
+    load_b_p = np.asarray(LOAD_B_BASE_MW * load_b_mult, dtype=float)
 
     # Add a representative short load spike.
     spike_start = 2*SAMPLES_PER_DAY + 18*12
