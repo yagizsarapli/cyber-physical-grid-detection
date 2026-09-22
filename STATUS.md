@@ -49,13 +49,17 @@ Read together with §2.5, this is not "the same null result twice" —
 it's "detection: the same null result twice; localization: a genuine,
 replicated, scale-dependent reversal" — a more complicated and more
 interesting answer than either a clean yes or a clean no. **A third
-network (IEEE 30-bus, §5.6) reproduces both halves of this pattern
-closely** in a single run (detection gap −0.006, localization gap
-+0.020 — both inside IEEE-14's own 4-seed range): two independent
-standard IEEE test systems now agree with each other and disagree with
-this project's own small custom 5-bus microgrid, reframing the
-question from "is IEEE-14 an outlier" to "is the 5-bus network the
-outlier, on localization specifically."
+network (IEEE 30-bus, §5.6) looked, in a single run, like it confirmed
+this pattern too — it doesn't, once replicated the same way.** Re-run
+across the same 4 seeds used at IEEE-14, neither gap holds a consistent
+sign at IEEE-30 (detection: −0.007/+0.000/+0.013/−0.003; localization:
++0.020/+0.007/+0.013/−0.020) — a clean null, unlike IEEE-14's uniformly
+one-directional gaps. The honest picture across all three networks: the
+localization reversal is real and seed-confirmed at exactly one scale
+(IEEE-14), not a general "standard/meshed networks" property — the
+single-run IEEE-30 "corroboration" was itself an instance of the
+single-run-narrow-margin mistake this project's own discipline exists
+to catch, caught this time before it reached the paper.
 
 One honest limit found by testing it directly: this advantage
 (residual+prior fusion, not topology) is **pattern recognition of
@@ -519,7 +523,7 @@ complementary pre-check for it (the out-of-fold linear-redundancy test
 already in §2.5). Source count updated throughout (40/56 → 41/57,
 reflecting the one genuinely new, deeply-read source this pass added).
 
-## 5.6. A third network (IEEE 30-bus) — confirms the pattern
+## 5.6. A third network (IEEE 30-bus) — the single-run corroboration didn't survive replication
 
 Requested specifically to test whether IEEE-14's localization reversal
 (§5) is IEEE-14-specific or a property of standard/meshed networks
@@ -536,7 +540,8 @@ replications, all 4 feature sets present), then run in full at
 n_rep=500 (2000 scenarios, 0 failed replications, 300 test scenarios
 matching every other scale study in this project).
 
-**Result — closely matches IEEE-14 on both tasks:**
+**First result (single run, seed 20260921) — appeared to closely match
+IEEE-14 on both tasks:**
 
 | | Detection (best) | Localization (best) |
 |---|---|---|
@@ -546,30 +551,57 @@ matching every other scale study in this project).
 | residual_only | 0.750 | 0.513 |
 
 Detection: topology_fusion (0.747) trails residual_plus_prior (0.753)
-and residual_only (0.750) — gap −0.006, same direction as IEEE-14
+and residual_only (0.750) — gap −0.007, same direction as IEEE-14
 (mean −0.015, range −0.021 to −0.011) and 5-bus (tied, not ahead).
 Localization: topology_fusion (0.533) leads every non-relational
 alternative (0.507–0.513) — gap +0.020, inside IEEE-14's own 4-seed
 range (+0.013 to +0.033) almost exactly, and the opposite direction
-from 5-bus.
+from 5-bus. This is exactly what a §5-style single-run, narrow-margin
+result looks like — and this project's own rule, established at §2 and
+applied again at §5, is not to trust one of those without seed
+replication. So, before writing up "two standard IEEE systems agree,"
+we ran it.
 
-**This is a single run, not yet seed-replicated** the way IEEE-14 was
-— reported as strong corroboration, not an independently-confirmed
-result on its own terms. But the qualitative match with IEEE-14
-(same-sign gaps, near-identical magnitudes, on a network built with
-completely independent pandapower/MATPOWER case data and no shared
-code path with IEEE-14 beyond this project's own generic WLS/attack
-machinery) is a meaningfully different, stronger kind of evidence than
-IEEE-14 alone: **two standard IEEE test systems now agree with each
-other and disagree with this project's own small custom 5-bus
-microgrid.** The honest re-framing this suggests: the reversal may not
-be an "IEEE-14 quirk" needing a tiebreaker — it may be that this
-project's own 5-bus network (deliberately small, mostly-radial, custom
-inverter roles) is the outlier relative to standard test systems, on
-localization specifically. A fourth system, and 4-seed replication of
-this IEEE-30 result specifically, would be the next steps to make that
-claim as solid as the IEEE-14 one — noted as future work, not done
-here given the time already invested in this session.
+**Second result (`30_ieee14_multi_seed_replication.py`'s sibling,
+`32_ieee30_multi_seed_replication.py`, same 4 seeds, same n_rep=500
+each) — it does not replicate:**
+
+| Seed | Detection gap | Localization gap |
+|---|---|---|
+| 20260921 | −0.007 | +0.020 |
+| 42 | +0.000 | +0.007 |
+| 777 | +0.013 | +0.013 |
+| 2024 | −0.003 | −0.020 |
+| **mean ± std** | **+0.001 ± 0.009** | **+0.005 ± 0.018** |
+
+Neither gap is sign-stable. Detection flips from −0.007 to +0.013 and
+back; localization flips from +0.020 down to −0.020 — the same
+magnitude, opposite sign, at the two ends of the 4 seeds. Compare to
+IEEE-14's own table (§5): detection −0.013/−0.013/−0.011/−0.021 (never
+positive), localization +0.013/+0.013/+0.033/+0.013 (never negative).
+IEEE-30 looks nothing like that once you look past the first seed —
+the first seed (20260921, this project's own primary seed throughout,
+used first for exactly that reason) simply happened to land close to
+IEEE-14's pattern by chance, in both directions, at once.
+
+**Corrected reading: this is a null result at IEEE-30, not a
+corroboration.** The "two standard IEEE test systems now agree with
+each other" framing written after the single run was premature — it
+was itself an instance of the exact mistake this project's multi-seed
+discipline exists to catch, caught this time before it reached the
+paper rather than after. The honest three-network picture is: the
+localization reversal is confirmed, seed-robust, at exactly one scale
+(IEEE-14); it's a clean null (topology-free ablation not needed, but
+not beaten either — no confident direction) at the other two (5-bus
+shows the opposite, seed-robust direction; IEEE-30 shows no stable
+direction at all). Whether IEEE-30's null result means the IEEE-14
+reversal really is IEEE-14-specific, or whether IEEE-30 just needs
+more than 500 replications per seed to resolve an effect this small
+against this network's own noise floor, is genuinely open — a
+question for a fourth system or a higher-replication IEEE-30 run, not
+something this data settles. `paper/main.tex`, `PAPER_DRAFT.md`, and
+`README.md` are all updated to report this corrected finding, not the
+single-run one.
 
 ## Positioning against related work
 
@@ -608,16 +640,20 @@ line of work in the smart-grid cybersecurity literature generally.
 
 ## Limitations (explicit, for anyone deciding whether to write this up)
 
-1. **Detection shows no topology-specific advantage at either scale
-   tested, confirmed across 4 seeds at both** (§2.5, §5), using two
-   unrelated feature-engineering implementations. **Localization is
-   different: a real, 4-seed-confirmed reversal** — the topology-free
-   ablation wins decisively at 5-bus, topology-fusion keeps a small
-   but consistent lead at IEEE-14 (§5). Both are still limited to
-   synthetic networks/loads; a third, real-topology system (e.g. IEEE
-   30-bus, or a real feeder) would test whether this specific
-   detection-null/localization-reversal pattern itself generalizes, or
-   is specific to these two topologies — in progress, see §5.6.
+1. **Detection shows no topology-specific advantage at any of the
+   three scales tested, confirmed across 4 seeds at each** (§2.5, §5,
+   §5.6), using two unrelated feature-engineering implementations.
+   **Localization is different, and scale-specific rather than
+   uniform: a real, 4-seed-confirmed reversal at IEEE-14 only** — the
+   topology-free ablation wins decisively at 5-bus, topology-fusion
+   keeps a small but consistent lead at IEEE-14 (§5), and a third
+   network (IEEE 30-bus, §5.6), re-tested across the same 4 seeds
+   after an initial single run looked like it matched IEEE-14, shows
+   no stable direction either way. Whether that makes IEEE-14 the
+   outlier or means IEEE-30 needs more replications to resolve a small
+   effect is open. All three are still limited to synthetic
+   networks/loads; a real feeder would test generalization beyond
+   standard synthetic test cases entirely.
 2. **No zero-day generalization**: demonstrated directly in §4 — 0–4%
    recall on a completely withheld attack type. The detection/
    localization numbers above only hold for attack types represented
@@ -667,10 +703,14 @@ recur).
    the narrow IEEE-14 localization margin across seeds, not just one
    run~~ **Done (§5)** — real, 4-seed-confirmed reversal (topology
    wins at 14-bus for localization specifically, loses everywhere
-   else). ~~Try a third standard system (IEEE 30-bus)~~ **In progress,
-   §5.6** — `31_ieee30_scale_replication.py`, confirmed compatible
-   with `h_ac()` (no CIGRE-MV-style bus-index mismatch) before
-   committing compute to it.
+   else). ~~Try a third standard system (IEEE 30-bus), and confirm it
+   across the same 4 seeds before trusting a single run~~ **Done,
+   §5.6** — `31_ieee30_scale_replication.py` then
+   `32_ieee30_multi_seed_replication.py`. The single run looked like a
+   match; the 4-seed replication shows neither gap is sign-stable at
+   IEEE-30, unlike IEEE-14 — a null result, not a corroboration. The
+   localization reversal is now confirmed at exactly one of three
+   tested scales, not a general standard/meshed-network property.
 2. Some form of unseen-attack robustness beyond pure supervised
    classification (e.g. anomaly-based pre-filter, or bridging Phase
    14/17's richer taxonomy) — §4 shows the current approach has none,

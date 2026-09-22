@@ -60,13 +60,19 @@ never actually topology-free) is an easy, general trap -- but, now
 confirmed, it does not mean topology never helps anywhere: it means
 the honest answer is task- and scale-specific, not a clean yes or no.
 
-A third network, IEEE 30-bus, reproduces both halves of this pattern
-closely in a single run (detection gap -0.006, localization gap
-+0.020 -- both inside IEEE-14's own 4-seed range). Two independent
-standard IEEE test systems now agree with each other and disagree
-with this project's own small custom 5-bus microgrid -- see
-`STATUS.md` §5.6 for the full numbers and the honest caveat (this
-run isn't seed-replicated yet, unlike IEEE-14).
+A third network, IEEE 30-bus, looked in a single run like it
+reproduced both halves of this pattern too (detection gap -0.006,
+localization gap +0.020 -- both inside IEEE-14's own 4-seed range).
+It doesn't hold up: re-run across the same 4 seeds used at IEEE-14,
+neither gap keeps a consistent sign (detection: -0.007, +0.000,
++0.013, -0.003; localization: +0.020, +0.007, +0.013, -0.020) -- a
+clean null, unlike IEEE-14's uniformly one-directional gaps. The
+single run had simply landed on a seed that looked representative by
+chance. Corrected picture: the localization reversal is real and
+seed-confirmed at exactly one of the three tested scales (IEEE-14),
+not a general property of standard/meshed networks -- see `STATUS.md`
+§5.6 for the full per-seed numbers and how the earlier single-run
+framing was caught and corrected.
 
 Two further things, still true and still worth reporting plainly: the
 detector does **not** generalize to an attack type it never trained on
@@ -112,6 +118,10 @@ exploration/            Phases 2A-2P (01..20_*.py): microgrid model,
 31_ieee30_scale_replication.py  A third network (IEEE 30-bus), direct
                        copy of 28 with the network swapped -- tests
                        whether IEEE-14's pattern generalizes
+32_ieee30_multi_seed_replication.py  4-seed replication of 31, same
+                       pattern as 30 -- found that IEEE-30's single-run
+                       match to IEEE-14 was a seed coincidence, not a
+                       real effect
 
 STATUS.md              Research log -- what was done, in what order,
                        every real number, every correction made along
@@ -164,6 +174,9 @@ python3 26_multi_seed_replication.py          # ~15-20 min, 4 full reruns
 python3 27_held_out_attack_type_generalization.py
 python3 24_realtime_latency_benchmark_FINAL.py
 python3 28_ieee14_scale_replication.py --n-rep 500   # slower per-replication than the 5-bus scripts; this is the confirmed run (§7 of STATUS.md) -- --n-rep 200 was an earlier, superseded pass
+python3 30_ieee14_multi_seed_replication.py   # ~30-40 min, 4 full reruns of 28
+python3 31_ieee30_scale_replication.py --n-rep 500
+python3 32_ieee30_multi_seed_replication.py   # ~30-40 min, 4 full reruns of 31
 python3 29_paper_figures.py
 ```
 
@@ -218,10 +231,14 @@ the short version:
   5-bus (no measurable topology-relational advantage), but
   localization shows a real, seed-robust reversal (`topology_fusion`
   ahead by a small, sign-stable margin). IEEE 30-bus
-  (`31_ieee30_scale_replication.py`) reproduces both halves of that
-  pattern closely in a single run, but is not yet seed-replicated the
-  way IEEE-14 is -- that replication is the one piece of scale work
-  still open.
+  (`31_ieee30_scale_replication.py`, then 4-seed-replicated by
+  `32_ieee30_multi_seed_replication.py`) looked like it matched
+  IEEE-14 in its first single run, but the replication shows neither
+  gap holds a consistent sign there -- a null result, not a second
+  confirmation. The localization reversal is confirmed at exactly one
+  of the three tested scales (IEEE-14); whether that makes IEEE-14
+  the outlier or IEEE-30 just needs more replications to resolve is
+  open (`STATUS.md` §5.6).
 - No target venue has formally accepted anything -- `paper/main.tex`
   is formatted for IEEE SmartGridComm as the best topical fit found,
   not a submission in progress.

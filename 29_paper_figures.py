@@ -225,13 +225,27 @@ loc14_best = {
     "residual_only": det14w["residual_only_loc"].mean(),
 }
 
-# IEEE-30: single run so far (n_rep=500) -- multi-seed replication not
-# yet run, unlike IEEE-14. Included because the single-run pattern
-# already matches IEEE-14's multi-seed-confirmed one closely.
-det30_df = pd.read_csv(RESULTS / "phase2x_ieee30_detection_metrics.csv")
-det30_best = det30_df.groupby("feature_set")["balanced_accuracy"].max().to_dict()
-loc30_df = pd.read_csv(RESULTS / "phase2x_ieee30_localization_metrics.csv")
-loc30_best = dict(zip(loc30_df["feature_set"], loc30_df["top1_accuracy"]))
+# IEEE-30: use the 4-seed mean (phase2y_..., from
+# 32_ieee30_multi_seed_replication.py), not the single-run phase2x_...
+# file -- same reason as IEEE-14 above (that file gets overwritten by
+# the last seed in the multi-seed loop). The single-run result had
+# looked like it matched IEEE-14's pattern; the 4-seed mean does not
+# (neither gap is sign-stable across seeds -- see Table tab:ieee30seeds
+# in the paper), which is the point of plotting the honest mean here
+# rather than the earlier single, unrepresentative run.
+det30w = pd.read_csv(RESULTS / "phase2y_ieee30_multiseed_replication.csv")
+det30_best = {
+    "topology_fusion": det30w["topology_fusion_det"].mean(),
+    "residual_plus_prior": det30w["residual_plus_prior_det"].mean(),
+    "prior_only": det30w["prior_only_det"].mean(),
+    "residual_only": det30w["residual_only_det"].mean(),
+}
+loc30_best = {
+    "topology_fusion": det30w["topology_fusion_loc"].mean(),
+    "residual_plus_prior": det30w["residual_plus_prior_loc"].mean(),
+    "prior_only": det30w["prior_only_loc"].mean(),
+    "residual_only": det30w["residual_only_loc"].mean(),
+}
 
 order = ["topology_fusion", "residual_plus_prior", "prior_only", "residual_only"]
 colors4 = [BLUE, AQUA, ORANGE, INK_SECONDARY]
@@ -251,13 +265,13 @@ for ax, d5, d14, d30, title in [
                        label=feat if ax is axes[0] else None)
         bar_labels(ax, bars, dy=0.02, fmt="{:.2f}")
     ax.set_xticks(x)
-    ax.set_xticklabels(["5-bus\n(n=300 test)", "IEEE 14-bus\n(4-seed mean)", "IEEE 30-bus\n(1 run, n=300 test)"])
+    ax.set_xticklabels(["5-bus\n(n=300 test)", "IEEE 14-bus\n(4-seed mean)", "IEEE 30-bus\n(4-seed mean)"])
     ax.set_ylim(0, 1.15)
     ax.set_title(title, fontsize=11, color=INK, pad=10)
     style_axes(ax)
 
 axes[0].legend(frameon=False, loc="upper center", bbox_to_anchor=(1.15, 1.22), ncol=4, fontsize=8.8)
-fig.suptitle("Detection: topology never confidently ahead, at any scale. Localization: topology-free wins at 5-bus; topology wins at both IEEE test systems",
+fig.suptitle("Detection: topology never confidently ahead, at any scale. Localization: topology-free wins at 5-bus; topology wins at IEEE-14 only, not (yet) at IEEE-30",
              fontsize=9.8, color=INK, y=1.04)
 fig.tight_layout()
 fig.savefig(FIGURES / "paper_fig4_scale_comparison.png", dpi=200, bbox_inches="tight")
