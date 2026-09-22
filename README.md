@@ -37,8 +37,8 @@ seed, a win for the topology-free ablation at localization (0.993 vs.
 0.980) -- across two independent stress conditions. The 4-seed mean
 tells the more honest story: both gaps are small, 0.3 percentage
 points either way (detection −0.003±0.010, sign unstable; localization
-−0.003±0.007, consistently but only narrowly favoring the topology-free
-side). **Combining residual and prior information explains the entire
+−0.003±0.007, topology_fusion never ahead across the 4 seeds but only
+barely behind). **Combining residual and prior information explains the entire
 advantage; explicit topology-awareness adds nothing measurable on this
 testbed** -- but "adds nothing" here means a near-exact tie, not a
 one-sided rout in either direction.
@@ -53,7 +53,8 @@ across 4 independent seeds, the two networks agree on **detection**
 (`topology_fusion` never confidently ahead of the best non-relational
 alternative -- an exact tie at 5-bus, a consistent 4-seed deficit at
 IEEE-14) but **not on localization**: the topology-free ablation is
-narrowly but consistently ahead at 5-bus (mean gap −0.003±0.007), while
+never worse at 5-bus across the 4 seeds, with only a small mean
+advantage (mean gap −0.003±0.007), while
 `topology_fusion` keeps a comparably small but oppositely-signed,
 4-seed-robust lead at IEEE-14 (mean gap +0.018, range +0.013 to +0.033,
 sign never flipping). Neither gap is large -- what's real is the

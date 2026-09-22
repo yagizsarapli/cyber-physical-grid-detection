@@ -466,8 +466,8 @@ it is smaller than it looks from the single primary-seed numbers
 alone: those are 0.993 vs. 0.980 (a "decisive"-looking 1.3-point gap),
 but the 4-seed mean gap is only −0.003 ± 0.007 (0.3 points, topology
 never ahead across the 4 seeds but only barely behind). So the fourth
-correction: **the topology-free ablation is consistently but only
-narrowly ahead at 5-bus, not "decisively" ahead** — while
+correction: **the topology-free ablation is never worse at 5-bus,
+with only a small mean advantage, not "decisively" ahead** — while
 topology_fusion keeps a comparably-sized but oppositely-signed lead at
 IEEE-14 (mean gap +0.018, never flipping sign). Both are small; what's
 real is the *direction* reversing between the two networks, not a
@@ -654,9 +654,10 @@ line of work in the smart-grid cybersecurity literature generally.
    §5.6), using two unrelated feature-engineering implementations.
    **Localization is different, and network-specific rather than
    uniform: a real, 4-seed-confirmed reversal at IEEE-14 only** — the
-   topology-free ablation is narrowly but consistently ahead at 5-bus
-   (mean gap −0.003±0.007, not the "decisive"-looking 0.993 vs. 0.980
-   the single primary-seed numbers alone suggest), topology-fusion
+   topology-free ablation is never worse at 5-bus across the 4 seeds,
+   with only a small mean advantage (−0.003±0.007, not the
+   "decisive"-looking 0.993 vs. 0.980 the single primary-seed numbers
+   alone suggest), topology-fusion
    keeps a comparably small but consistent lead at IEEE-14 (§5), and a third
    network (IEEE 30-bus, §5.6), re-tested across the same 4 seeds
    after an initial single run looked like it matched IEEE-14, shows
