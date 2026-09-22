@@ -1026,6 +1026,41 @@ worth it for a robustness question the paper can instead disclose directly.
 Item 10 (GFL/GFM wording) and the statistical-language precision note are
 also still wording-only, deferred to the same rewrite.
 
+### Update, same day: the full rewrite is done
+
+`paper/main.tex`, `PAPER_DRAFT.md`, and `README.md` have all been rewritten to
+report the numbers and finding above as the paper's actual, current story --
+title kept (it was already neutral to whichever specific pattern emerged),
+but abstract, every Results section, Discussion, Limitations, and Conclusion
+are new prose, not edits layered on the pre-audit version. Table III/IV/V (or
+their Markdown equivalents) report the corrected 4-seed means and per-seed
+gaps directly from `results/phase2u_multiseed_summary.csv`,
+`phase2w_ieee14_multiseed_summary.csv`, and `phase2y_ieee30_multiseed_summary.csv`.
+All four figures were regenerated against the corrected result files
+(`29_paper_figures.py`, including two stale hardcoded strings caught and
+fixed in the process: Fig. 4's suptitle and a code comment still described
+the pre-IEEE-30-detection-advantage finding, and Fig. 2's latency waterfall's
+final bar still showed the pre-real-classifier-fix number). `paper/main.pdf`
+compiles clean (12 pages, no undefined references, no new overfull boxes
+beyond one pre-existing 1.98pt one unrelated to this content). One drafting
+error was caught and fixed before finalizing: Table III's bold-leader
+markers were placed on the wrong cell (or left on a cell whose gap sign
+actually flips across seeds) for the IEEE-14-detection and IEEE-30-
+localization rows -- both are correctly unbolded now, matching the rule
+stated in the table's own footnote.
+
+Deliberately not done in this pass: items 4/6/7/8/9/10's own *wording*
+subtleties (GFL/GFM phrasing, statistical-language precision, the SNR/prior
+mismatch) are folded into the rewritten prose directly rather than tracked
+as separate open items any more -- see the Limitations section of the
+rewritten paper itself for how each is now stated. What remains genuinely
+open, and is stated as such in the paper: whether the IEEE-30 detection
+advantage is explained by feature redundancy (untested -- no detection-level
+redundancy check has been built for IEEE-30, unlike the localization check
+already run at 5-bus/IEEE-14), and whether a fourth or fifth network would
+extend, contradict, or add a third pattern to the current
+"each standard IEEE system favors a different task" result.
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,

@@ -127,7 +127,7 @@ steps = [
     ("+ Warm-start\n(dead end)", 37.14, CRITICAL),
     ("+ Fast measurement\nupdate (Fix 1)", 22.62, ORANGE),
     ("+ Light classifier\n(Fix 2)", 19.60, ORANGE),
-    ("+ Tolerance/iter tuning\n(N=300 final)", 16.41, GOOD),
+    ("+ Tolerance/iter tuning\n(N=300, real detector)", 16.91, GOOD),
 ]
 labels = [s[0] for s in steps]
 values = [s[1] for s in steps]
@@ -228,11 +228,11 @@ loc14_best = {
 # IEEE-30: use the 4-seed mean (phase2y_..., from
 # 32_ieee30_multi_seed_replication.py), not the single-run phase2x_...
 # file -- same reason as IEEE-14 above (that file gets overwritten by
-# the last seed in the multi-seed loop). The single-run result had
-# looked like it matched IEEE-14's pattern; the 4-seed mean does not
-# (neither gap is sign-stable across seeds -- see Table tab:ieee30seeds
-# in the paper), which is the point of plotting the honest mean here
-# rather than the earlier single, unrepresentative run.
+# the last seed in the multi-seed loop). Post-audit (STATUS.md Sec. 6):
+# after fixing the oracle-leaked residual and test-set model selection,
+# IEEE-30 detection shows a real, 4-seed-consistent topology advantage
+# (new to the audit, not present in any earlier version); localization
+# stays null/sign-unstable, unchanged in character.
 det30w = pd.read_csv(RESULTS / "phase2y_ieee30_multiseed_replication.csv")
 det30_best = {
     "topology_fusion": det30w["topology_fusion_det"].mean(),
@@ -271,8 +271,8 @@ for ax, d5, d14, d30, title, n5_label in [
     style_axes(ax)
 
 axes[0].legend(frameon=False, loc="upper center", bbox_to_anchor=(1.15, 1.22), ncol=4, fontsize=8.8)
-fig.suptitle("Detection: topology never confidently ahead, at any network. Localization: topology-free wins at 5-bus; topology wins at IEEE-14 only, not (yet) at IEEE-30",
-             fontsize=9.8, color=INK, y=1.04)
+fig.suptitle("Detection: null at 5-bus/IEEE-14, a real advantage at IEEE-30. Localization: null at 5-bus/IEEE-30, a real advantage at IEEE-14 -- each task's advantage is network-specific, not shared",
+             fontsize=9.4, color=INK, y=1.04)
 fig.tight_layout()
 fig.savefig(FIGURES / "paper_fig4_scale_comparison.png", dpi=200, bbox_inches="tight")
 plt.close(fig)

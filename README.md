@@ -6,9 +6,11 @@ neighbors -- actually help it (a) tell a cyberattack apart from a
 normal physical disturbance, (b) find where the attack is, and (c) do
 both fast enough for a protective relay to act on?
 
-Short answer: **no** -- once measured against a fair comparison, not
-the one we first ran. See below for what that means, how we caught
-our own mistake, and where to find the details.
+Short answer: **it depends which task and which network** -- and only
+after two full rounds of auditing our own pipeline and catching our
+own mistakes, twice, did that become the honest answer rather than a
+cleaner-sounding wrong one. See below for what that means and where to
+find the details.
 
 ![5-bus vs. IEEE 14-bus vs. IEEE 30-bus: detection and localization by feature set](figures/paper_fig4_scale_comparison.png)
 
@@ -23,75 +25,96 @@ accuracy 0.950 vs. 0.873) and localizing it (top-1 accuracy 0.980 vs.
 0.780) -- validated across 4 independent random seeds, gap never
 flipping sign.
 
-That comparison turned out to be unfair. `prior_only` alone is
-missing residual information `topology_fusion` has always had; the
-actual control is `residual_plus_prior` -- residual and prior features
-combined, with **no** topology at all. Building that ablation surfaced
-a real bug: topology-relational columns are *named* after the
-residual/innovation quantities they compare (e.g.
+That comparison turned out to be unfair, in a way that took two
+separate rounds of auditing to fully uncover. Round one: `prior_only`
+alone is missing residual information `topology_fusion` has always
+had; the actual control is `residual_plus_prior` -- residual and prior
+features combined, with **no** topology at all. Building that ablation
+surfaced a real bug -- topology-relational columns are *named* after
+the residual/innovation quantities they compare (e.g.
 `neighbor_mean_residual`), so the original name-matching feature-set
 split let about half of them leak into what were meant to be
-topology-free baselines. Once fixed, the fair comparison is a
-near-exact tie for detection (0.950 vs. 0.950) and, on the primary
-seed, a win for the topology-free ablation at localization (0.993 vs.
-0.980) -- across two independent stress conditions. The 4-seed mean
-tells the more honest story: both gaps are small, 0.3 percentage
-points either way (detection −0.003±0.010, sign unstable; localization
-−0.003±0.007, topology_fusion never ahead across the 4 seeds but only
-barely behind). **Combining residual and prior information explains the entire
-advantage; explicit topology-awareness adds nothing measurable on this
-testbed** -- but "adds nothing" here means a near-exact tie, not a
-one-sided rout in either direction.
+topology-free baselines. Round two, later, on a deliberately
+adversarial re-read of the same code: those "topology-free" 5-bus
+localization baselines also secretly carried node degree and
+device-role flags that reveal which buses are even attack-eligible --
+a second, independent leak, found only once this project's own central
+finding was audited a second time. With **both** fixed, the fair
+comparison is a near-exact tie on **both tasks**: detection 0.938 vs.
+0.935 (4-seed mean, gap +0.003±0.010, sign unstable) and localization
+0.968 vs. 0.963 (gap +0.005±0.036, sign unstable, including two exact
+ties across the 4 seeds). An earlier, once-corrected pass had reported
+localization as a topology-free *win* (0.980 vs. 0.993, before the
+degree/role leak was found); that asymmetry is gone once the
+comparison is fair on both sides. **Combining residual and prior
+information explains the entire advantage; explicit topology-awareness
+adds nothing measurable at 5-bus, on either task.**
 
-A separately-implemented, size-agnostic pipeline for a bigger,
-standard, meshed network (IEEE 14-bus, n=500 replications, 300 test
-scenarios) turned out to need the *same* fix -- an independent
-rediscovery of the same category of mistake, in a cruder form (an
-explicit list of neighbor/degree columns inside "residual_only" this
-time, not a name-substring collision). Once corrected and confirmed
-across 4 independent seeds, the two networks agree on **detection**
-(`topology_fusion` never confidently ahead of the best non-relational
-alternative -- an exact tie at 5-bus, a consistent 4-seed deficit at
-IEEE-14) but **not on localization**: the topology-free ablation is
-never worse at 5-bus across the 4 seeds, with only a small mean
-advantage (mean gap −0.003±0.007), while
-`topology_fusion` keeps a comparably small but oppositely-signed,
-4-seed-robust lead at IEEE-14 (mean gap +0.018, range +0.013 to +0.033,
-sign never flipping). Neither gap is large -- what's real is the
-*direction* reversing between the two networks, not a big effect at
-either one -- the one place in this whole project where explicit
-topology-relational features show a genuine, if modest, advantage. Two
-independently-written pipelines needing the identical feature-definition
-fix is itself informative -- it suggests that specific mistake
-(comparing a topology-rich feature set against baselines that were
-never actually topology-free) is an easy, general trap -- but, now
-confirmed, it does not mean topology never helps anywhere: it means
-the honest answer is task- and network-specific, not a clean yes or no.
+A separately-implemented, size-agnostic pipeline for two bigger,
+standard networks (IEEE 14-bus and IEEE 30-bus, n=500 replications,
+300 test scenarios each) needed the same two rounds of correction --
+first an independent rediscovery of the feature-leakage bug (a cruder,
+explicit-list version, not a name-substring collision), then, in the
+same later, adversarial audit that found 5-bus's second leak, a
+completely different and more serious problem: the "residual" feature
+at both networks had been computed from the simulator's *hidden
+ground-truth state* -- something no real detector could ever observe
+-- instead of the actual, deployable WLS measurement residual the rest
+of this project already used. The same audit found that model
+selection at all three networks (5-bus included) had been picking
+whichever of three candidate models scored best on the test set
+itself, rather than on a held-out validation split. Fixing both and
+re-running every network at 4 seeds changed the three-network picture
+a second time, into something more complicated than either earlier
+version:
 
-A third network, IEEE 30-bus, looked in a single run like it
-reproduced both halves of this pattern too (detection gap -0.006,
-localization gap +0.020 -- both inside IEEE-14's own 4-seed range).
-It doesn't hold up: re-run across the same 4 seeds used at IEEE-14,
-neither gap keeps a consistent sign (detection: -0.007, +0.000,
-+0.013, -0.003; localization: +0.020, +0.007, +0.013, -0.020) -- a
-clean null, unlike IEEE-14's uniformly one-directional gaps. The
-single run had simply landed on a seed that looked representative by
-chance. Corrected picture: the localization reversal is real and
-seed-confirmed at exactly one of the three tested scales (IEEE-14),
-not a general property of standard/meshed networks -- see `STATUS.md`
-§5.6 for the full per-seed numbers and how the earlier single-run
-framing was caught and corrected.
+- **Detection**: null at 5-bus and IEEE-14 (gaps of +0.003±0.010 and
+  +0.002±0.013, sign unstable at both) -- but a real, 4-seed-consistent
+  *advantage* at IEEE-30 (+0.039±0.032, positive in all 4 seeds). This
+  specific finding is new to this last audit pass; no earlier version
+  of this analysis, corrected or not, found a detection advantage
+  anywhere.
+- **Localization**: null at 5-bus and IEEE-30 (+0.005±0.036 and
+  +0.008±0.018, both sign-unstable) -- but a real advantage at IEEE-14
+  (+0.018±0.021, positive in all 4 seeds), the one finding across this
+  whole project that has survived every round of correction so far,
+  though with roughly double the uncertainty an earlier, less-audited
+  pass reported.
 
-Two further things, still true and still worth reporting plainly: the
-detector does **not** generalize to an attack type it never trained on
-(0-4% recall when one of two attack families is withheld), and the
-full decision pipeline (state estimation -> feature computation ->
-classification) was profiled against a one-cycle (20 ms at 50 Hz)
-protection-relevant computational target -- the original 43 ms
-pipeline turned out to be slow because of a fixable software
-inefficiency, not the model or the estimator's math, and fixing it
-brought the pipeline to 16.4/17.0/17.1 ms at the median/p95/p99. That
-part of the finding is unaffected by the correction above.
+Put plainly: each of the two standard IEEE systems shows a genuine,
+replicated topology advantage in exactly one task, and it's a
+*different* task at each network; the small custom 5-bus microgrid
+shows no advantage in either task, under either round of correction.
+Three separately-written pipelines needing the same category of
+feature-leakage fix, and then a second, more serious category of
+mistake (oracle information reaching a feature meant to be deployable)
+surviving a first full audit only to be caught in a second, more
+adversarial one, is itself the finding we'd want a reader to take away
+alongside the numbers: neither kind of bug was visible from results
+alone -- both were found only by reading feature-computation code line
+by line against "could a real, deployed detector actually compute
+this." Full per-seed numbers, and the complete before/after account of
+both audit rounds, are in `STATUS.md` §6.
+
+Two further things, checked and re-checked under the same audit and
+essentially unchanged: the detector does **not** generalize to an
+attack type it never trained on (0-1.3% recall when one of two attack
+families is withheld, evaluated under a corrected, symmetric protocol
+-- an earlier, asymmetric version of this same test reported 0-4%,
+same conclusion), and the full decision pipeline (state estimation ->
+feature computation -> classification) was profiled against a
+one-cycle (20 ms at 50 Hz) protection-relevant computational target --
+the original 43 ms pipeline turned out to be slow because of a fixable
+software inefficiency, not the model or the estimator's math, and
+fixing it brought the pipeline to 16.9/17.6/18.4 ms at the
+median/p95/p99. That benchmark's own classifier and residual feature
+were also found, in the same audit, to be untrained-on-dummy-data and
+oracle-leaked respectively; re-measured with a classifier trained on
+150 real warm-up scenarios and a deployable residual, the timing
+conclusion is essentially unchanged (16.9 ms vs. the earlier 16.4 ms
+median) -- computing a fixed-size result takes the same time whether
+the numbers behind it are real or synthetic, so this was always
+expected to hold, and it did.
 
 **Full story, with every number and why it's trustworthy: [`STATUS.md`](STATUS.md).**
 
@@ -127,9 +150,17 @@ exploration/            Phases 2A-2P (01..20_*.py): microgrid model,
                        copy of 28 with the network swapped -- tests
                        whether IEEE-14's pattern generalizes
 32_ieee30_multi_seed_replication.py  4-seed replication of 31, same
-                       pattern as 30 -- found that IEEE-30's single-run
-                       match to IEEE-14 was a seed coincidence, not a
-                       real effect
+                       pattern as 30 -- re-run twice: first found
+                       IEEE-30's single-run match to IEEE-14 was a seed
+                       coincidence (localization null); re-run again
+                       after 31's oracle-residual/model-selection audit
+                       fix found a real, 4-seed-consistent detection
+                       advantage instead, new to that later pass
+33_feature_redundancy_diagnostic.py  Out-of-fold Ridge/R^2 check that
+                       the paper's Discussion cited but no earlier
+                       script actually computed -- written to close
+                       that gap, confirms the qualitative redundancy
+                       finding on the corrected features
 
 STATUS.md              Research log -- what was done, in what order,
                        every real number, every correction made along
@@ -233,21 +264,32 @@ the short version:
 - Bibliography: 41/57 sources verified in depth; a handful of
   IEEE Xplore/ACM-hosted sources couldn't be fetched at all (paywall)
   and need institutional access.
-- Scale: three network topologies have now been tested. The IEEE
-  14-bus study (`28_ieee14_scale_replication.py`) is confirmed at
-  n=500 (300 test scenarios) across 4 independent seeds
-  (`30_ieee14_multi_seed_replication.py`): detection agrees with
-  5-bus (no measurable topology-relational advantage), but
-  localization shows a real, seed-robust reversal (`topology_fusion`
-  ahead by a small, sign-stable margin). IEEE 30-bus
-  (`31_ieee30_scale_replication.py`, then 4-seed-replicated by
-  `32_ieee30_multi_seed_replication.py`) looked like it matched
-  IEEE-14 in its first single run, but the replication shows neither
-  gap holds a consistent sign there -- a null result, not a second
-  confirmation. The localization reversal is confirmed at exactly one
-  of the three tested scales (IEEE-14); whether that makes IEEE-14
-  the outlier or IEEE-30 just needs more replications to resolve is
-  open (`STATUS.md` §5.6).
+- Scale: three network topologies have now been tested, each to the
+  same 4-seed standard, each independently audited twice (feature-
+  leakage, then oracle-residual/test-set-model-selection --
+  `STATUS.md` §6 has the full account). Corrected result: detection
+  shows a reproducible topology advantage at exactly one network
+  (IEEE 30-bus, `31_ieee30_scale_replication.py` +
+  `32_ieee30_multi_seed_replication.py`); localization shows a
+  reproducible advantage at exactly one, different, network (IEEE
+  14-bus, `28_ieee14_scale_replication.py` +
+  `30_ieee14_multi_seed_replication.py`); 5-bus shows no advantage in
+  either task. This is a materially different finding from an earlier
+  pass, which (before the oracle-residual and test-set-selection bugs
+  were found) reported a uniform detection null and a localization
+  advantage confined to IEEE-14 only, with IEEE-30 null on both tasks.
+- A committed, reproducible script for the out-of-fold redundancy
+  diagnostic (`33_feature_redundancy_diagnostic.py`) now exists; the
+  paper's earlier 0.960/0.959 R² numbers were never backed by
+  committed code and have been replaced with 0.950/0.966, the
+  qualitative conclusion unchanged.
+- Two smaller, known-and-documented gaps remain deliberately unresolved:
+  cross-network measurement-noise/forecast-uncertainty is not
+  standardized across the three networks (a real confound on the
+  cross-network comparisons above, `STATUS.md` §6 item 7), and the
+  README's own clean-clone reproduction path had a real bug (fixed --
+  see the Repository map above) that was only caught while verifying
+  this same audit.
 - No target venue has formally accepted anything -- `paper/main.tex`
   is formatted for IEEE SmartGridComm as the best topical fit found,
   not a submission in progress.
