@@ -206,7 +206,19 @@ def one_replication(rep, load_buses, node_ids, adjacency, rng, base_net):
             continue
         vm_hat, va_hat = result["vm_hat"], result["va_hat"]
 
-        norm_res = np.abs(vm_hat - vm_true) * 100.0  # pu -> %, keeps scale sane
+        # FIX (caught in post-submission audit): this used to be
+        # np.abs(vm_hat - vm_true) * 100.0 -- vm_true is the simulator's
+        # hidden ground-truth state, never available to a real detector.
+        # measurement_schema() (phase21) puts all n_bus voltage
+        # measurements first, in bus-index order, so result["norm_residual"]
+        # (= (z - h(x_hat)) / stds, computed in run_wls -- the standard,
+        # deployable WLS/chi-square residual) sliced to the first n_bus
+        # entries gives exactly the per-bus voltage-measurement residual,
+        # with no oracle information. This is the same quantity the 5-bus
+        # pipeline uses (result["norm_residual"] via measurement_positions()
+        # in 22_graph_ready_protected_prior_telemetry_HARD.py).
+        meas_norm_res = np.asarray(result["norm_residual"], dtype=float)
+        norm_res = np.abs(meas_norm_res[:len(node_ids)])
         innov = np.abs(vm_hat - vm_prior) * 100.0
 
         row = {
@@ -319,6 +331,7 @@ def main():
 
     feats = feature_sets(df)
     train_mask = df["split"] == "train"
+    val_mask = df["split"] == "validation"
     test_mask = df["split"] == "test"
 
     models = {
@@ -329,22 +342,39 @@ def main():
 
     det_rows = []
     loc_rows = []
+    # FIX (caught in post-submission audit): the validation split was
+    # constructed above but never used -- all 3 models were fit on
+    # train and scored directly on test, then the best test score was
+    # reported. That is test-set model selection (optimistic bias).
+    # Now: fit all 3 on train, pick the model with the best VALIDATION
+    # balanced accuracy per feature set, and report only that model's
+    # (unseen) test performance -- the test set is touched exactly once.
     for fname, cols in feats.items():
         X_train, y_train = df.loc[train_mask, cols], df.loc[train_mask, "is_cyber"]
+        X_val, y_val = df.loc[val_mask, cols], df.loc[val_mask, "is_cyber"]
         X_test, y_test = df.loc[test_mask, cols], df.loc[test_mask, "is_cyber"]
+
+        fitted, val_scores = {}, {}
         for mname, model_obj in models.items():
             clf = Pipeline([("impute", SimpleImputer()), ("scale", StandardScaler()),
                              ("model", model_obj)])
             clf.fit(X_train, y_train)
-            pred = clf.predict(X_test)
-            proba = clf.predict_proba(X_test)[:, 1] if hasattr(clf, "predict_proba") else pred
-            det_rows.append({
-                "feature_set": fname, "model": mname,
-                "balanced_accuracy": balanced_accuracy_score(y_test, pred),
-                "f1": f1_score(y_test, pred),
-                "recall": recall_score(y_test, pred),
-                "roc_auc": roc_auc_score(y_test, proba),
-            })
+            val_pred = clf.predict(X_val)
+            fitted[mname] = clf
+            val_scores[mname] = balanced_accuracy_score(y_val, val_pred)
+
+        best_mname = max(val_scores, key=val_scores.get)
+        clf = fitted[best_mname]
+        pred = clf.predict(X_test)
+        proba = clf.predict_proba(X_test)[:, 1] if hasattr(clf, "predict_proba") else pred
+        det_rows.append({
+            "feature_set": fname, "model": best_mname,
+            "val_balanced_accuracy": val_scores[best_mname],
+            "balanced_accuracy": balanced_accuracy_score(y_test, pred),
+            "f1": f1_score(y_test, pred),
+            "recall": recall_score(y_test, pred),
+            "roc_auc": roc_auc_score(y_test, proba),
+        })
 
     # Real trained localizer: rank every node's P(is_target) per scenario,
     # not just argmax-residual. Trained/evaluated on cyber scenarios only

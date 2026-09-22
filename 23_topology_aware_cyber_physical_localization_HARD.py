@@ -746,15 +746,21 @@ def build_node_learning_table(node):
 
 
 def node_feature_sets(node):
-    base_structural = [
-        "degree",
-        "role_pcc",
-        "role_pv_gfl",
-        "role_load",
-        "role_bess_gfm",
-    ]
-
-    residual = base_structural + [
+    # FIX (caught in post-submission audit): "degree" and the four
+    # "role_*" one-hot flags used to be prepended to every feature set
+    # below, including residual_only/prior_only/residual_plus_prior.
+    # "degree" is graph-topology information -- it does not belong in
+    # anything called non-relational/topology-free. "role_load" is
+    # worse: the attack generator only ever targets load buses
+    # (target_bus = rng.choice(load_buses) in the scenario generator),
+    # so handing the localizer role_load is close to handing it the
+    # answer's eligible-candidate set directly, regardless of which
+    # feature set is nominally being tested. Dropped from all four
+    # sets below (including topology_fusion -- this structural/role
+    # metadata was never part of what this paper calls "topology-
+    # relational": the neighbor/incident-edge comparison features
+    # below already cover that).
+    residual = [
         "norm_residual_v",
         "norm_residual_p",
         "norm_residual_q",
@@ -764,7 +770,7 @@ def node_feature_sets(node):
         "residual_score",
     ]
 
-    prior = base_structural + [
+    prior = [
         "innovation_vm_pu",
         "innovation_va_deg",
         "innovation_p_mw",
@@ -1238,6 +1244,24 @@ def main():
         feat_sets,
     )
 
+    # FIX (caught in post-submission audit): run_learned_detection()
+    # fits and test-scores all 3 candidate models per feature set, and
+    # validation_balanced_accuracy was already computed for each but
+    # never used to pick a winner -- downstream code (26_multi_seed_
+    # replication.py, 29_paper_figures.py) instead took the max TEST
+    # balanced_accuracy across the 3 models, which is test-set model
+    # selection (optimistic bias), the same bug independently found
+    # and fixed in 28_ieee14_scale_replication.py. Now: keep exactly
+    # one (validation-selected) model's row per feature set here, so
+    # every downstream .max()/.groupby() over this file's feature_set
+    # column is a no-op over an already-selected value, not a selection
+    # itself.
+    learned_df = (
+        learned_df
+        .sort_values("validation_balanced_accuracy", ascending=False)
+        .drop_duplicates(subset="feature_set", keep="first")
+    )
+
     detection_df = pd.concat(
         [
             pd.DataFrame(detection_rows),
@@ -1266,6 +1290,14 @@ def main():
     learned_loc = run_learned_localization(
         node_learn,
         node_sets,
+    )
+
+    # FIX (caught in post-submission audit): same test-set model-
+    # selection bug as run_learned_detection() above, for localization.
+    learned_loc = (
+        learned_loc
+        .sort_values("validation_top1_accuracy", ascending=False)
+        .drop_duplicates(subset="feature_set", keep="first")
     )
 
     localization_df = pd.concat(
