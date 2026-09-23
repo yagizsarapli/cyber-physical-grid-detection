@@ -46,15 +46,22 @@ def extract_headline(seed):
     topo_det = det[det["feature_set"] == "topology_fusion"]["balanced_accuracy"].max()
     rpp_det = det[det["feature_set"] == "residual_plus_prior"]["balanced_accuracy"].max()
     prior_det = det[det["feature_set"] == "prior_only"]["balanced_accuracy"].max()
+    # FIX (caught in a later audit, STATUS.md Sec. 6): residual_only was
+    # never tracked here, so Table III/Fig. 4's 5-bus "res." column had
+    # to fall back to a single-primary-seed value instead of a genuine
+    # 4-seed mean like every other cell. Added for parity with 30/32_*.py.
+    res_det = det[det["feature_set"] == "residual_only"]["balanced_accuracy"].max()
     topo_loc = loc[loc["feature_set"] == "topology_fusion"]["top1_accuracy"].max()
     rpp_loc = loc[loc["feature_set"] == "residual_plus_prior"]["top1_accuracy"].max()
     prior_loc = loc[loc["feature_set"] == "prior_only"]["top1_accuracy"].max()
+    res_loc = loc[loc["feature_set"] == "residual_only"]["top1_accuracy"].max()
 
     return {
         "seed": seed,
         "topology_fusion_best_detection_balacc": topo_det,
         "residual_plus_prior_best_detection_balacc": rpp_det,
         "prior_only_best_detection_balacc": prior_det,
+        "residual_only_best_detection_balacc": res_det,
         # positive = topology_fusion ahead of the no-topology
         # residual+prior ablation; this is the gap that actually
         # isolates topology's own contribution (the old "detection_gap"
@@ -64,6 +71,7 @@ def extract_headline(seed):
         "topology_fusion_best_localization_top1": topo_loc,
         "residual_plus_prior_best_localization_top1": rpp_loc,
         "prior_only_best_localization_top1": prior_loc,
+        "residual_only_best_localization_top1": res_loc,
         "topology_vs_residual_plus_prior_localization_gap": topo_loc - rpp_loc,
         "localization_gap": topo_loc - prior_loc,
     }

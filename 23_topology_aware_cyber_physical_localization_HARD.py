@@ -943,6 +943,19 @@ def run_simple_localization(node):
 
 
 def run_learned_localization(node, feat_sets):
+    # FIX (caught in post-submission audit, STATUS.md Sec. 6): this used
+    # to train (and validate/test-select) on ALL train-split nodes,
+    # including clean/physical_load_disturbance scenarios where every
+    # node is a negative (target_node=0) -- unlike 28/31_*.py's IEEE-14/
+    # IEEE-30 localizers, which only ever see cyber-scenario nodes
+    # (`cyber_nodes = node_df[node_df["is_cyber"] == 1]`), despite a
+    # comment elsewhere in this project claiming the two protocols
+    # matched. rank_localization_metrics() already filters to cyber
+    # scenarios internally for the *evaluation* metric itself (so the
+    # reported top-1/top-2 numbers were never computed over non-cyber
+    # rows), but the *training* data composition differed. Restricting
+    # to cyber-scenario nodes here makes the protocol a true match.
+    node = node[node["is_cyber_graph"] == 1].copy()
     train = node[node["dataset_split"] == "train"].copy()
     val = node[node["dataset_split"] == "validation"].copy()
     test = node[node["dataset_split"] == "test"].copy()

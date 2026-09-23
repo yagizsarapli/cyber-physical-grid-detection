@@ -943,6 +943,11 @@ def run_simple_localization(node):
 
 
 def run_learned_localization(node, feat_sets):
+    # FIX (caught in post-submission audit, STATUS.md Sec. 6): see
+    # 23_..._HARD.py -- localizer training used to include clean/
+    # physical_load_disturbance nodes (all negative), unlike IEEE-14/30's
+    # cyber-only training. Restricted here to match.
+    node = node[node["is_cyber_graph"] == 1].copy()
     train = node[node["dataset_split"] == "train"].copy()
     val = node[node["dataset_split"] == "validation"].copy()
     test = node[node["dataset_split"] == "test"].copy()

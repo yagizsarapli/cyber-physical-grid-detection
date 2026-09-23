@@ -195,14 +195,25 @@ plt.close(fig)
 # ============================================================
 # Figure 4 -- §7 scale comparison, 5-bus vs IEEE 14-bus vs IEEE 30-bus
 # ============================================================
-# Read the 5-bus side from the same (corrected, primary-seed) HARD
-# results Table II/the main text use, instead of a hardcoded snapshot
-# -- the previous hardcoded values were from seed=2024, inconsistent
-# with the seed=20260812 numbers quoted in the main text and Table II.
-det5_df = pd.read_csv(RESULTS / "phase2s_hard_cyber_detection_metrics.csv")
-det5 = det5_df.groupby("feature_set")["balanced_accuracy"].max().to_dict()
-loc5_df = pd.read_csv(RESULTS / "phase2s_hard_attack_localization_metrics.csv")
-loc5 = loc5_df.groupby("feature_set")["top1_accuracy"].max().to_dict()
+# FIX (caught in post-submission audit, STATUS.md Sec. 6): this used to
+# read the single-run phase2s_hard_*.csv snapshot, which gets
+# overwritten by 26_multi_seed_replication.py's LAST seed (2024) --
+# so it silently showed one seed's numbers, not the 4-seed mean Table
+# III actually reports. Now reads the same phase2u_... 4-seed file
+# Figure 1 above uses, mirroring the IEEE-14/30 blocks below exactly
+# (residual_only is tracked there too as of this fix).
+det5 = {
+    "topology_fusion": seeds["topology_fusion_best_detection_balacc"].mean(),
+    "residual_plus_prior": seeds["residual_plus_prior_best_detection_balacc"].mean(),
+    "prior_only": seeds["prior_only_best_detection_balacc"].mean(),
+    "residual_only": seeds["residual_only_best_detection_balacc"].mean(),
+}
+loc5 = {
+    "topology_fusion": seeds["topology_fusion_best_localization_top1"].mean(),
+    "residual_plus_prior": seeds["residual_plus_prior_best_localization_top1"].mean(),
+    "prior_only": seeds["prior_only_best_localization_top1"].mean(),
+    "residual_only": seeds["residual_only_best_localization_top1"].mean(),
+}
 
 # IEEE-14: use the 4-seed mean (phase2w_..., from
 # 30_ieee14_multi_seed_replication.py), not the single-run
@@ -252,9 +263,9 @@ colors4 = [BLUE, AQUA, ORANGE, INK_SECONDARY]
 
 fig, axes = plt.subplots(1, 2, figsize=(11, 4.4))
 
-for ax, d5, d14, d30, title, n5_label in [
-    (axes[0], det5, det14_best, det30_best, "Detection (balanced accuracy)", "n=300 test"),
-    (axes[1], loc5, loc14_best, loc30_best, "Localization (top-1 accuracy)", "n=150 test"),
+for ax, d5, d14, d30, title in [
+    (axes[0], det5, det14_best, det30_best, "Detection (balanced accuracy)"),
+    (axes[1], loc5, loc14_best, loc30_best, "Localization (top-1 accuracy)"),
 ]:
     x = np.arange(3)
     w = 0.19
@@ -265,14 +276,14 @@ for ax, d5, d14, d30, title, n5_label in [
                        label=feat if ax is axes[0] else None)
         bar_labels(ax, bars, dy=0.02, fmt="{:.2f}")
     ax.set_xticks(x)
-    ax.set_xticklabels([f"5-bus\n({n5_label})", "IEEE 14-bus\n(4-seed mean)", "IEEE 30-bus\n(4-seed mean)"])
+    ax.set_xticklabels(["5-bus\n(4-seed mean)", "IEEE 14-bus\n(4-seed mean)", "IEEE 30-bus\n(4-seed mean)"])
     ax.set_ylim(0, 1.15)
     ax.set_title(title, fontsize=11, color=INK, pad=10)
     style_axes(ax)
 
 axes[0].legend(frameon=False, loc="upper center", bbox_to_anchor=(1.15, 1.22), ncol=4, fontsize=8.8)
-fig.suptitle("Detection: null at 5-bus/IEEE-14, a real advantage at IEEE-30. Localization: null at 5-bus/IEEE-30, a real advantage at IEEE-14 -- each task's advantage is network-specific, not shared",
-             fontsize=9.4, color=INK, y=1.04)
+fig.suptitle("Detection: null at 5-bus/IEEE-14, positive in all 4 tested seeds at IEEE-30. Localization: null at 5-bus/IEEE-30, never negative across the same 4 seeds at IEEE-14 -- neither yet a statistically confirmed effect at this seed count",
+             fontsize=9.0, color=INK, y=1.04)
 fig.tight_layout()
 fig.savefig(FIGURES / "paper_fig4_scale_comparison.png", dpi=200, bbox_inches="tight")
 plt.close(fig)

@@ -182,7 +182,7 @@ def main():
           f"train balanced accuracy = "
           f"{float(np.mean(clf.predict(X_train) == y_train)):.3f}")
 
-    wls_ms, feat_ms, pred_ms, total_ms = [], [], [], []
+    wls_ms, poststate_ms, feat_ms, assembly_ms, pred_ms, total_ms = [], [], [], [], [], []
     n_fail = 0
 
     for i in range(N_TRIALS):
@@ -208,12 +208,20 @@ def main():
             n_fail += 1
             continue
 
+        # FIX (caught in a second-pass audit, STATUS.md Sec. 6): total_ms
+        # used to be (t1-t0)+(t3-t2)+(t5-t4) -- summing only the three
+        # named sub-steps and silently skipping estimated_state()/h_ac()/
+        # residual+innovation computation (the t1-to-t2 gap) and the X
+        # array assembly (the t3-to-t4 gap) entirely. Both are real,
+        # on-the-critical-path work a deployed cycle would also have to
+        # do, and at p99 there was only 1.59ms of headroom under the
+        # 20ms budget -- not obviously enough to safely ignore an
+        # unmeasured gap. Every stage is now timed with no gap between
+        # timestamps, and total_ms is (t5-t0), the true, nothing-excluded
+        # per-cycle wall-clock time; the four named sub-steps are kept
+        # for the diagnostic breakdown, now including the two that were
+        # previously invisible (poststate_ms, assembly_ms).
         vm_hat, va_hat = phase21.estimated_state(net)
-        # FIX (post-submission audit, Sec. 6 item 4): deployable
-        # residual z - h(x_hat), not vm_hat - vm_true (oracle). Same
-        # arithmetic shape/cost as before, so this does not affect the
-        # feature_computation timing -- the fix is about what the
-        # numbers mean, not the stopwatch.
         h_hat = phase21.h_ac(model, vm_hat, va_hat)
         norm_res = np.abs((np.asarray(z_used, dtype=float) - h_hat) / stds)[: len(vm_hat)]
         innov = np.abs(va_hat - va_prior)
@@ -228,9 +236,11 @@ def main():
         t5 = time.perf_counter()
 
         wls_ms.append((t1 - t0) * 1000.0)
+        poststate_ms.append((t2 - t1) * 1000.0)
         feat_ms.append((t3 - t2) * 1000.0)
+        assembly_ms.append((t4 - t3) * 1000.0)
         pred_ms.append((t5 - t4) * 1000.0)
-        total_ms.append(((t1 - t0) + (t3 - t2) + (t5 - t4)) * 1000.0)
+        total_ms.append((t5 - t0) * 1000.0)
 
     def stats(x):
         a = np.array(x)
@@ -242,9 +252,12 @@ def main():
         }
 
     summary = pd.DataFrame({
-        "stage": ["wls_state_estimation", "feature_computation", "model_inference", "TOTAL"],
+        "stage": ["wls_state_estimation", "poststate_residual_innovation",
+                   "feature_computation", "array_assembly", "model_inference",
+                   "TOTAL (t5-t0, nothing excluded)"],
         **{
-            k: [stats(wls_ms)[k], stats(feat_ms)[k], stats(pred_ms)[k], stats(total_ms)[k]]
+            k: [stats(wls_ms)[k], stats(poststate_ms)[k], stats(feat_ms)[k],
+                 stats(assembly_ms)[k], stats(pred_ms)[k], stats(total_ms)[k]]
             for k in ["median_ms", "p95_ms", "p99_ms", "max_ms"]
         },
     })

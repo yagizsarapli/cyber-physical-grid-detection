@@ -69,22 +69,32 @@ a second time, into something more complicated than either earlier
 version:
 
 - **Detection**: null at 5-bus and IEEE-14 (gaps of +0.003±0.010 and
-  +0.002±0.013, sign unstable at both) -- but a real, 4-seed-consistent
-  *advantage* at IEEE-30 (+0.039±0.032, positive in all 4 seeds). This
-  specific finding is new to this last audit pass; no earlier version
-  of this analysis, corrected or not, found a detection advantage
-  anywhere.
+  +0.002±0.013, sign unstable at both) -- but a gap positive in all 4
+  tested seeds at IEEE-30 (+0.039±0.032). This specific finding is new
+  to this last audit pass; no earlier version of this analysis,
+  corrected or not, found a detection advantage anywhere.
 - **Localization**: null at 5-bus and IEEE-30 (+0.005±0.036 and
-  +0.008±0.018, both sign-unstable) -- but a real advantage at IEEE-14
-  (+0.018±0.021, positive in all 4 seeds), the one finding across this
-  whole project that has survived every round of correction so far,
-  though with roughly double the uncertainty an earlier, less-audited
-  pass reported.
+  +0.008±0.018, both sign-unstable) -- but a gap never negative across
+  the same 4 seeds at IEEE-14 (+0.018±0.021), the one finding across
+  this whole project that has survived every round of correction so
+  far, though with roughly double the uncertainty an earlier,
+  less-audited pass reported.
 
-Put plainly: each of the two standard IEEE systems shows a genuine,
-replicated topology advantage in exactly one task, and it's a
+**A caveat on both of those, stated plainly**: 4 same-signed seeds is
+consistent-sign evidence, not a statistically confirmed effect. A
+standard t-based 95% CI crosses zero for both gaps (IEEE-30 detection:
++0.039±0.050, i.e. [-0.011, 0.089]; IEEE-14 localization: +0.018±0.033,
+i.e. [-0.015, 0.051]), and a distribution-free sign test on 4
+same-signed seeds gives one-sided p=0.5⁴=0.0625, short of the
+conventional 0.05 threshold. Both findings are described throughout as
+*consistent in sign across all four tested seeds*, not as confirmed
+nonzero effects -- resolving that would need roughly 10-20 seeds or a
+paired/bootstrap difference test, neither run here.
+
+Put plainly: each of the two standard IEEE systems shows a
+sign-consistent topology gap in exactly one task, and it's a
 *different* task at each network; the small custom 5-bus microgrid
-shows no advantage in either task, under either round of correction.
+shows no such gap in either task, under either round of correction.
 Three separately-written pipelines needing the same category of
 feature-leakage fix, and then a second, more serious category of
 mistake (oracle information reaching a feature meant to be deployable)
@@ -154,8 +164,8 @@ exploration/            Phases 2A-2P (01..20_*.py): microgrid model,
                        IEEE-30's single-run match to IEEE-14 was a seed
                        coincidence (localization null); re-run again
                        after 31's oracle-residual/model-selection audit
-                       fix found a real, 4-seed-consistent detection
-                       advantage instead, new to that later pass
+                       fix found a detection gap positive in all 4
+                       tested seeds instead, new to that later pass
 33_feature_redundancy_diagnostic.py  Out-of-fold Ridge/R^2 check that
                        the paper's Discussion cited but no earlier
                        script actually computed -- written to close
@@ -268,16 +278,22 @@ the short version:
   same 4-seed standard, each independently audited twice (feature-
   leakage, then oracle-residual/test-set-model-selection --
   `STATUS.md` §6 has the full account). Corrected result: detection
-  shows a reproducible topology advantage at exactly one network
-  (IEEE 30-bus, `31_ieee30_scale_replication.py` +
-  `32_ieee30_multi_seed_replication.py`); localization shows a
-  reproducible advantage at exactly one, different, network (IEEE
-  14-bus, `28_ieee14_scale_replication.py` +
-  `30_ieee14_multi_seed_replication.py`); 5-bus shows no advantage in
+  shows a gap consistently positive across all four tested seeds at
+  exactly one network (IEEE 30-bus, `31_ieee30_scale_replication.py` +
+  `32_ieee30_multi_seed_replication.py`); localization shows a gap
+  never negative across the same four seeds at exactly one, different,
+  network (IEEE 14-bus, `28_ieee14_scale_replication.py` +
+  `30_ieee14_multi_seed_replication.py`); 5-bus shows no such gap in
   either task. This is a materially different finding from an earlier
   pass, which (before the oracle-residual and test-set-selection bugs
   were found) reported a uniform detection null and a localization
   advantage confined to IEEE-14 only, with IEEE-30 null on both tasks.
+  Neither surviving gap is yet a statistically confirmed effect at
+  n=4 seeds -- a t-based 95% CI crosses zero for both, and a
+  distribution-free sign test on 4 same-signed seeds gives p=0.0625,
+  short of p<0.05 (`STATUS.md` §6 has the full calculation). We
+  describe both as consistent in sign across every seed tested, not
+  as confirmed nonzero.
 - A committed, reproducible script for the out-of-fold redundancy
   diagnostic (`33_feature_redundancy_diagnostic.py`) now exists; the
   paper's earlier 0.960/0.959 R² numbers were never backed by
@@ -286,10 +302,14 @@ the short version:
 - Two smaller, known-and-documented gaps remain deliberately unresolved:
   cross-network measurement-noise/forecast-uncertainty is not
   standardized across the three networks (a real confound on the
-  cross-network comparisons above, `STATUS.md` §6 item 7), and the
-  README's own clean-clone reproduction path had a real bug (fixed --
-  see the Repository map above) that was only caught while verifying
-  this same audit.
+  cross-network comparisons above, `STATUS.md` §6 item 7 -- so
+  "network-specific" throughout this project is more precisely
+  *setup-and-network-specific under the tested noise/prior regimes*;
+  IEEE-14/IEEE-30 share an identical convention, so only comparisons
+  that include 5-bus carry this confound), and the README's own
+  clean-clone reproduction path had a real bug (fixed -- see the
+  Repository map above) that was only caught while verifying this
+  same audit.
 - No target venue has formally accepted anything -- `paper/main.tex`
   is formatted for IEEE SmartGridComm as the best topical fit found,
   not a submission in progress.
