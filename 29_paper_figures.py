@@ -241,9 +241,10 @@ loc14_best = {
 # file -- same reason as IEEE-14 above (that file gets overwritten by
 # the last seed in the multi-seed loop). Post-audit (STATUS.md Sec. 6):
 # after fixing the oracle-leaked residual and test-set model selection,
-# IEEE-30 detection shows a real, 4-seed-consistent topology advantage
-# (new to the audit, not present in any earlier version); localization
-# stays null/sign-unstable, unchanged in character.
+# IEEE-30 detection shows a gap positive in all 4 tested seeds (new to
+# the audit, not present in any earlier version; not yet a statistically
+# confirmed effect at this seed count -- see paper's Sec. VII caveat);
+# localization stays null/sign-unstable, unchanged in character.
 det30w = pd.read_csv(RESULTS / "phase2y_ieee30_multiseed_replication.csv")
 det30_best = {
     "topology_fusion": det30w["topology_fusion_det"].mean(),

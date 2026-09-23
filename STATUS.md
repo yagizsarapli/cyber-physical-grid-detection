@@ -1,8 +1,10 @@
 # GRIDRA Cyber-Physical Microgrid — Status
 
-Last updated: 2026-09-21. Supersedes the "Current backbone / Next" section
-in `README.md`, which only described the Aug-11 starting point and was
-never updated through phases 2B–2T.
+Last updated: 2026-09-23 (§6's second dated update -- read §6 in full
+before trusting anything else in this file; everything before it is
+pre-audit and superseded). Supersedes the "Current backbone / Next"
+section in `README.md`, which only described the Aug-11 starting point
+and was never updated through phases 2B–2T.
 
 ## Summary
 
@@ -70,18 +72,27 @@ at test time (0–4% recall, vs. 89–100% when that type is in training).
 Framed accurately, not overclaimed — see §4.
 
 **⚠ Everything above this line, and everywhere else in this file before
-§6, describes the pre-audit numbers.** §6 documents a post-submission
-code-level audit (2026-09-22) that found and fixed three real bugs
-(oracle-leaked "residual" features at IEEE-14/30, test-set model
-selection at all three networks, non-topology-free baselines at
-5-bus) and re-ran all three networks. The corrected picture is
-materially different — most notably, IEEE-30 detection goes from null
-to a real, 4-seed-consistent topology *advantage*, and 5-bus
-localization goes from a small residual_plus_prior edge to a clean
-null. `paper/main.tex`, `PAPER_DRAFT.md`, and `README.md` have **not**
-been updated to match and currently describe the old, superseded
-story. Read §6 before trusting any specific number anywhere else in
-this file or in the paper files.
+§6, describes the pre-audit numbers — SUPERSEDED, kept only as the
+research log's chronology.** §6 documents a post-submission code-level
+audit (2026-09-22) that found and fixed three real bugs (oracle-leaked
+"residual" features at IEEE-14/30, test-set model selection at all
+three networks, non-topology-free baselines at 5-bus) and re-ran all
+three networks. The corrected picture is materially different — most
+notably, IEEE-30 detection goes from null to a gap positive in all 4
+tested seeds, and 5-bus localization goes from a small
+residual_plus_prior edge to a clean null. §6 was itself extended by a
+fourth review round (2026-09-23, §6's second dated update) that found
+and fixed a further localization-protocol mismatch, a non-end-to-end
+latency timer, a stale Fig. 4 data source, a sign-test miscalculation,
+and softened this project's own "real"/"genuine" advantage language
+once the n=4-seed statistical caveat was worked out precisely — read
+that update too, not just the first one. **`paper/main.tex`,
+`PAPER_DRAFT.md`, and `README.md` are, as of the latest commit, kept in
+sync with §6 in full** (they were not, for a period after §6 was first
+written — that gap is closed). Read all of §6, in order, before
+trusting any specific number anywhere else in this file or in the
+paper files; nothing before §6 should be cited as this project's
+current result.
 
 ## Method
 
@@ -1194,6 +1205,94 @@ check) — flagged as optional by the reviewer, not started. All four
 originally-flagged items (plus the Table 1 bonus finding) are otherwise
 closed as of this update.
 
+### Update, 2026-09-23 (same day, second pass): a sign-test arithmetic
+### error, an overstated latency abstract, a reproducibility ordering
+### bug, and two stale-text cleanups
+
+A fifth review pass, on the just-completed fourth-round fixes above, found
+two real precision problems plus three smaller cleanups.
+
+1. **The IEEE-14 localization sign test was computed wrong.** The caveat
+   paragraph above reported one-sided $p=0.5^4=0.0625$ for *both* surviving
+   gaps. That is correct for IEEE-30 detection (four of four seeds strictly
+   positive: $+0.083,+0.040,+0.020,+0.013$). It is wrong for IEEE-14
+   localization ($0.000,+0.047,+0.020,+0.007$): one of those four is an
+   *exact tie*, and a standard sign test excludes ties from the count rather
+   than treating them as a positive — verified independently via
+   `scipy`/hand calculation before fixing. The effective sample is three of
+   three non-zero seeds positive, giving $p=0.5^3=0.125$, not $0.0625$ —
+   weaker evidence than IEEE-30's, not the same number. Fixed in both
+   places this appeared (§7's caveat paragraph, the Limitations item).
+
+2. **The "10–20 seeds" claim conflated two different questions.** The text
+   said resolving the caveat "would need substantially more seeds (roughly
+   10–20 ... for a sign test alone to reach conventional significance)."
+   This is not what the arithmetic says: a sign test's own significance
+   threshold is a low bar if the true pattern holds — one more same-signed
+   seed at IEEE-30 (five of five) already gives one-sided $p=0.5^5=0.03125
+   <0.05$, and a sixth would clear the two-sided threshold ($2\times
+   0.5^6=0.03125$). Verified this arithmetic directly (`scipy.stats`) before
+   fixing. The 10–20 figure is a defensible estimate for a *different* and
+   harder goal — a tight, stable $t$-based confidence interval on the
+   effect's *magnitude* — not for sign-test significance, which a handful
+   of further same-signed seeds could reach on its own. Reworded both
+   instances to separate the two claims rather than conflate them.
+
+3. **The abstract's latency figures read more settled than the three-run
+   measurement actually supports.** "11.6/12.4/12.6 ms at the
+   median/p95/p99" is technically the most recent run's exact numbers, but
+   a reader who hasn't reached the body text (which already describes the
+   cross-run tail variability, added in the fourth-round update above)
+   could read it as "p99 reliably under budget," when one of the three runs
+   had p99 at 36.2 ms. Reworded the abstract in `paper/main.tex` and
+   `PAPER_DRAFT.md` to state explicitly, at the abstract level, that median
+   and p95 are the stable, reliably-in-budget quantities and that both the
+   maximum and (in one of three runs) p99 are not. `README.md`'s
+   corresponding passage already had this nuance from the fourth-round
+   update and needed no further change.
+
+4. **A reproducibility-sequencing bug in `README.md`'s canonical reproduce
+   list.** `33_feature_redundancy_diagnostic.py`'s own `--help` text already
+   warns that its IEEE-14 $R^2$ figure needs a *fresh primary-seed* run of
+   `28_ieee14_scale_replication.py` — `30_ieee14_multi_seed_replication.py`
+   overwrites `data/phase2v_ieee14_node_feature_matrix.csv` with its own
+   last seed (2024), not the primary seed (20260921) the paper's IEEE-14
+   $R^2=0.966$ figure is computed from. Verified this precisely: `28`'s
+   own code is the only writer of that file; `30`'s `SEEDS` list starts at
+   20260921 and ends at 2024, confirming it does overwrite the file with
+   the wrong seed's data if run first. The README's reproduce sequence
+   never ran `33` at all (28 → 30 → 31 → 32 → 29), so following it verbatim
+   would not reproduce the paper's IEEE-14 redundancy number even if `33`
+   were appended at the end. Fixed by inserting `33` between `28` and `30`,
+   with a comment explaining why the ordering matters.
+
+5. **Two stale-text cleanups.** A code comment in `29_paper_figures.py`
+   still described the IEEE-30 detection finding as "a real, 4-seed-
+   consistent topology advantage" — reworded to match the paper's own
+   established, softened convention ("a gap positive in all 4 tested
+   seeds"). Separately, this file's own pre-§6 "Summary" and "Limitations"
+   sections still stated superseded conclusions (most visibly, "detection
+   shows no topology-specific advantage at any of the three scales," no
+   longer true once IEEE-30's consistent-sign gap was found) without a
+   clear marker — a reviewer grepping this repo for the project's
+   conclusion could land on either section and read a contradiction with
+   no indication which is current. Added an explicit **SUPERSEDED** banner
+   to the Limitations section, strengthened the existing pre-§6 warning at
+   the end of the Summary section (which itself had gone stale — it still
+   claimed the paper files hadn't been updated to match §6, which is no
+   longer true), and updated this file's own "Last updated" date. Left the
+   historical prose within §6 itself untouched (its own "Update" subsection
+   structure already makes the chronology explicit, and retroactively
+   sanitizing an audit's own log of how understanding evolved would defeat
+   its purpose as a research log).
+
+**Verification.** `paper/main.tex` recompiles clean (12 pages, same single
+pre-existing 1.98pt overfull hbox) after all edits in this pass; visually
+re-read every page against the changes. All arithmetic claims above
+(sign-test p-values, seed-count thresholds) were independently computed
+via `scipy.stats`/hand calculation before editing, not taken on the
+reviewer's word alone — matching this project's established discipline.
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,
@@ -1230,6 +1329,18 @@ FDIA detection via CNN-LSTM and multi-sensor fusion is an active
 line of work in the smart-grid cybersecurity literature generally.
 
 ## Limitations (explicit, for anyone deciding whether to write this up)
+
+**SUPERSEDED — this section is the pre-audit historical record, kept
+for the research log's own chronology.** It reflects the state of
+understanding *before* the post-submission methodological audit
+(Section 6 above), which found and fixed an oracle-leaked residual
+feature, test-set model selection, and a second 5-bus feature-leakage
+bug, and materially changed the conclusion described below (most
+notably: detection at IEEE-30 does now show a consistent-sign
+advantage, which item 1 below says it doesn't). **The current,
+authoritative result is Section 6 above and `paper/main.tex` /
+`PAPER_DRAFT.md` / `README.md`** — do not cite anything below this line
+as this project's present conclusion.
 
 1. **Detection shows no topology-specific advantage at any of the
    three scales tested, confirmed across 4 seeds at each** (§2.5, §5,

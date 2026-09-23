@@ -88,12 +88,19 @@ version:
 consistent-sign evidence, not a statistically confirmed effect. A
 standard t-based 95% CI crosses zero for both gaps (IEEE-30 detection:
 +0.039±0.050, i.e. [-0.011, 0.089]; IEEE-14 localization: +0.018±0.033,
-i.e. [-0.015, 0.051]), and a distribution-free sign test on 4
-same-signed seeds gives one-sided p=0.5⁴=0.0625, short of the
-conventional 0.05 threshold. Both findings are described throughout as
-*consistent in sign across all four tested seeds*, not as confirmed
-nonzero effects -- resolving that would need roughly 10-20 seeds or a
-paired/bootstrap difference test, neither run here.
+i.e. [-0.015, 0.051]). A distribution-free sign test doesn't reach
+p<0.05 for either, but not by the same margin: one-sided p=0.5⁴=0.0625
+for IEEE-30 (four of four seeds positive), and p=0.5³=0.125 for IEEE-14
+once its one exact tie is excluded per sign-test convention (three of
+three non-zero seeds positive, not four of four -- a standard sign test
+drops ties rather than counting them as a positive). Both findings are
+described throughout as *consistent in sign across all four tested
+seeds*, not as confirmed nonzero effects. Note the sign test's own bar
+is low if the pattern holds -- a fifth same-direction seed at IEEE-30
+would already cross one-sided p<0.05 (0.5⁵=0.03125) -- so resolving the
+gap's actual *magnitude* with a tight, stable confidence interval is the
+harder goal, needing roughly 10-20 seeds or a paired/bootstrap
+difference test, neither run here.
 
 Put plainly: each of the two standard IEEE systems shows a
 sign-consistent topology gap in exactly one task, and it's a
@@ -236,6 +243,7 @@ python3 26_multi_seed_replication.py          # ~15-20 min, 4 full reruns
 python3 27_held_out_attack_type_generalization.py
 python3 24_realtime_latency_benchmark_FINAL.py
 python3 28_ieee14_scale_replication.py --n-rep 500   # slower per-replication than the 5-bus scripts; this is the confirmed run (§7 of STATUS.md) -- --n-rep 200 was an earlier, superseded pass
+python3 33_feature_redundancy_diagnostic.py   # must run HERE, not after 30 below -- 30's own seed loop overwrites data/phase2v_ieee14_node_feature_matrix.csv with its last seed (2024), and this script's IEEE-14 R^2 needs the primary-seed (20260921) run 28 just produced, not a multi-seed leftover (see this script's own --help)
 python3 30_ieee14_multi_seed_replication.py   # ~30-40 min, 4 full reruns of 28
 python3 31_ieee30_scale_replication.py --n-rep 500
 python3 32_ieee30_multi_seed_replication.py   # ~30-40 min, 4 full reruns of 31
@@ -302,9 +310,11 @@ the short version:
   advantage confined to IEEE-14 only, with IEEE-30 null on both tasks.
   Neither surviving gap is yet a statistically confirmed effect at
   n=4 seeds -- a t-based 95% CI crosses zero for both, and a
-  distribution-free sign test on 4 same-signed seeds gives p=0.0625,
-  short of p<0.05 (`STATUS.md` §6 has the full calculation). We
-  describe both as consistent in sign across every seed tested, not
+  distribution-free sign test gives p=0.0625 for IEEE-30 (4/4 seeds
+  positive) and p=0.125 for IEEE-14 (its one exact tie excluded per
+  sign-test convention, leaving 3/3 non-zero seeds positive, not 4/4),
+  short of p<0.05 either way (`STATUS.md` §6 has the full calculation).
+  We describe both as consistent in sign across every seed tested, not
   as confirmed nonzero.
 - A committed, reproducible script for the out-of-fold redundancy
   diagnostic (`33_feature_redundancy_diagnostic.py`) now exists; the
