@@ -262,15 +262,25 @@ def feature_sets(df):
     # contains (argmax_n_neighbors included, since "n_neighbors"
     # contains "neighbor") gives a genuinely topology-free
     # residual_only/prior_only, matching the fix already applied to the
-    # 5-bus study's feature_columns(). topology_fusion is unchanged
-    # (still everything); residual_plus_prior is the new, fair,
-    # topology-free union.
+    # 5-bus study's feature_columns(). residual_plus_prior is the new,
+    # fair, topology-free union.
+    #
+    # FIX (caught in a still-later audit): argmax_n_neighbors is raw node
+    # degree -- static graph structure, not a scenario-specific neighbor
+    # COMPARISON like argmax_neighbor_mean/max/local_minus_neighbor. Since
+    # target_bus is always drawn from load_buses only (one_replication(),
+    # never generator/slack buses), degree could let a model learn "which
+    # bus types are typically targets" as a static prior rather than
+    # anything about this scenario's actual residual/innovation pattern --
+    # exactly the reasoning that already removed raw `degree` from every
+    # 5-bus feature set, topology_fusion included (STATUS.md Sec. 6). For
+    # three-network consistency, topology_fusion here excludes it too now.
     res_all = [c for c in df.columns if c.startswith("res_") or c.startswith("resnode_")]
     innov_all = [c for c in df.columns if c.startswith("innov_") or c.startswith("innovnode_")]
     residual_only = [c for c in res_all if "neighbor" not in c]
     prior_only = [c for c in innov_all if "neighbor" not in c]
     residual_plus_prior = residual_only + prior_only
-    topology_fusion = res_all + innov_all
+    topology_fusion = [c for c in res_all + innov_all if "n_neighbors" not in c]
     return {"residual_only": residual_only, "prior_only": prior_only,
             "residual_plus_prior": residual_plus_prior,
             "topology_fusion": topology_fusion}
@@ -382,8 +392,13 @@ def main():
     # not just argmax-residual. Trained/evaluated on cyber scenarios only
     # (mirrors the 5-bus study's localization protocol).
     # Same correction as feature_sets() above: node_res_nb_mean/nb_max/
-    # local_minus_nb and node_n_neighbors are all relational/structural,
-    # not local -- they do not belong in a topology-free baseline.
+    # local_minus_nb are relational/structural, not local -- they do not
+    # belong in a topology-free baseline. node_n_neighbors (raw degree) is
+    # excluded from topology_fusion entirely, same reasoning as
+    # feature_sets() above and as the 5-bus study's own degree removal:
+    # static structure, not a scenario-specific neighbor comparison, and a
+    # possible target-eligibility leak since attacks only ever target load
+    # buses.
     node_feat_sets = {
         "residual_only": ["node_res"],
         "prior_only": ["node_innov"],
@@ -391,7 +406,7 @@ def main():
         "topology_fusion": ["node_res", "node_res_nb_mean", "node_res_nb_max",
                              "node_res_local_minus_nb",
                              "node_innov", "node_innov_nb_mean", "node_innov_nb_max",
-                             "node_innov_local_minus_nb", "node_n_neighbors"],
+                             "node_innov_local_minus_nb"],
     }
     cyber_nodes = node_df[node_df["is_cyber"] == 1]
     train_scn = cyber_nodes[cyber_nodes["split"] == "train"]

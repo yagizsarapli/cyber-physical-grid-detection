@@ -73,22 +73,27 @@ a second time, into something more complicated than either earlier
 version:
 
 - **Detection**: null at 5-bus and IEEE-14 (gaps of +0.008±0.012 and
-  +0.002±0.013, sign unstable at both) -- but a gap positive in all 4
-  tested seeds at IEEE-30 (+0.039±0.032). This specific finding is new
+  -0.003±0.013, sign unstable at both) -- but a gap positive in all 4
+  tested seeds at IEEE-30 (+0.039±0.029). This specific finding is new
   to this last audit pass; no earlier version of this analysis,
   corrected or not, found a detection advantage anywhere.
 - **Localization**: null at 5-bus and IEEE-30 (-0.007±0.016 and
-  +0.008±0.018, both sign-unstable) -- but a gap never negative across
-  the same 4 seeds at IEEE-14 (+0.018±0.021), the one finding across
+  +0.002±0.023, both sign-unstable) -- but a gap never negative across
+  the same 4 seeds at IEEE-14 (+0.023±0.021), the one finding across
   this whole project that has survived every round of correction so
-  far, though with roughly double the uncertainty an earlier,
+  far -- including a later round that removed raw node degree
+  (`node_n_neighbors`) from `topology_fusion` at both IEEE networks (it
+  was already removed at 5-bus for the same reason: attacks only ever
+  target load buses, so degree alone could act as a static
+  target-eligibility prior rather than a genuine neighbor comparison)
+  -- though with roughly double the uncertainty an earlier,
   less-audited pass reported.
 
 **A caveat on both of those, stated plainly**: 4 same-signed seeds is
 consistent-sign evidence, not a statistically confirmed effect. A
 standard t-based 95% CI crosses zero for both gaps (IEEE-30 detection:
-+0.039±0.050, i.e. [-0.011, 0.089]; IEEE-14 localization: +0.018±0.033,
-i.e. [-0.015, 0.051]). A distribution-free sign test doesn't reach
++0.039±0.047, i.e. [-0.008, 0.086]; IEEE-14 localization: +0.023±0.033,
+i.e. [-0.010, 0.056]). A distribution-free sign test doesn't reach
 p<0.05 for either, but not by the same margin: one-sided p=0.5⁴=0.0625
 for IEEE-30 (four of four seeds positive), and p=0.5³=0.125 for IEEE-14
 once its one exact tie is excluded per sign-test convention (three of
@@ -319,7 +324,7 @@ the short version:
 - A committed, reproducible script for the out-of-fold redundancy
   diagnostic (`33_feature_redundancy_diagnostic.py`) now exists; the
   paper's earlier 0.960/0.959 R² numbers were never backed by
-  committed code and have been replaced with 0.958/0.966 (a further,
+  committed code and have been replaced with 0.956/0.966 (a further,
   separate reproducibility bug -- the 5-bus figure was briefly
   0.950/0.966 in an intermediate pass that turned out to itself not be
   reproducible from a clean clone; see `STATUS.md` §6's latest update

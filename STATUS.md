@@ -1391,6 +1391,116 @@ directly), and IEEE-14's exact reproduction (0.966, matching the paper to
 three decimal places). `paper/main.tex` recompiles clean (12 pages, same
 single pre-existing overfull hbox) after the $R^2$ update.
 
+### Update, 2026-09-23 (same day, fourth pass): the last real ablation --
+### raw node degree was still inside `topology_fusion` at IEEE-14/30 -- plus
+### a group-safety fix to the redundancy diagnostic and one editorial slip
+
+A seventh review pass identified the most consequential remaining
+methodological question in the whole project, plus two smaller,
+independently-verified items.
+
+1. **IEEE-14/30's `topology_fusion` still contained raw node degree.**
+   `28_ieee14_scale_replication.py`/`31_ieee30_scale_replication.py`'s
+   `argmax_node_topology()` returns `"argmax_n_neighbors": len(nbs)`
+   (detection), and `per_node_rows()` returns `"node_n_neighbors": len(nbs)`
+   (localization) -- both flow into `topology_fusion` (the "neighbor"
+   substring filter that keeps them out of `residual_only`/`prior_only`
+   does not apply to `topology_fusion`, which was simply `res_all +
+   innov_all`, unfiltered). Since `target_bus = int(rng.choice(load_buses))`
+   in `one_replication()` -- attacks only ever target load buses, never
+   generator/slack buses -- raw degree could let a model learn "which bus
+   types are typically targets" as a static prior, independent of any
+   scenario-specific residual/innovation signal. This is exactly the
+   reasoning that already removed `degree`/`role_*` from every 5-bus
+   feature set, `topology_fusion` included (this section, above); IEEE-14/
+   30 had never received the analogous fix, breaking three-network
+   consistency in exactly the two findings the paper's whole scale study
+   rests on (IEEE-30 detection, IEEE-14 localization).
+
+   **Fixed by excluding `n_neighbors`-suffixed columns from
+   `topology_fusion`** at both networks -- `topology_fusion = [c for c in
+   res_all + innov_all if "n_neighbors" not in c]` (detection) and
+   dropping `"node_n_neighbors"` from the localization feature list
+   (localization). `residual_only`/`prior_only`/`residual_plus_prior` are
+   structurally unchanged, since degree was never in them. Smoke-tested
+   both scripts at `--n-rep 15` before committing to the full rerun.
+
+   **Re-ran the full 4-seed replication at both networks
+   ($N{=}500$, sequentially, to avoid CPU contention) and checked whether
+   the paper's two headline findings survive.** They do, essentially
+   unchanged:
+   - **IEEE-30 detection**: still positive in all 4 seeds. Gap $+0.013$ to
+     $+0.080$ (was $+0.013$ to $+0.083$), mean $+0.039\pm0.029$ (was
+     $+0.039\pm0.032$) -- the mean is identical to three decimal places;
+     only the std tightened slightly.
+   - **IEEE-14 localization**: still non-negative in all 4 seeds (one
+     exact tie, three strictly positive). Gap $+0.000$ to $+0.047$ (was
+     the same range), mean $+0.023\pm0.021$ (was $+0.018\pm0.021$) -- if
+     anything, a *larger* mean gap after removing degree, not smaller,
+     which rules out degree having been doing positive work for this
+     finding.
+   - Both networks' detection-only and localization-only *columns*
+     (`residual_only`/`prior_only`/`residual_plus_prior`) are numerically
+     identical to the pre-fix values, confirming the fix touched only
+     `topology_fusion` as intended, with no side effects elsewhere.
+   - IEEE-14 detection and IEEE-30 localization remain null/sign-unstable,
+     as before (unaffected in character; specific per-seed values shifted
+     slightly since `topology_fusion` is one of the models compared for
+     "best non-relational alternative" selection at each seed, so removing
+     one of its columns has some downstream numerical effect even on
+     columns nominally unrelated to it -- but the qualitative story for
+     both is unchanged).
+
+   Updated every dependent number throughout `paper/main.tex`,
+   `PAPER_DRAFT.md`, and `README.md`: Table III's IEEE-14/IEEE-30
+   `topo.` cells, Tables IV/V in full, the Abstract, the §7 "Result"/
+   "Interpretation" paragraphs, the statistical-caveat paragraph's CIs and
+   the "roughly 1.7$\times$" magnitude comparison (recomputed, still
+   accurate), and the Limitations item. Regenerated Fig. 4. Added a note
+   to §7's methodology paragraph documenting this as a third,
+   independent audit-and-fix round on top of the feature-leakage and
+   oracle-residual/model-selection fixes already described there.
+
+2. **`33_feature_redundancy_diagnostic.py`'s `KFold` wasn't group-safe.**
+   Every accuracy result elsewhere in this project splits train/test at
+   the *replication* level specifically so a single replication's matched
+   scenarios never straddle the split -- this diagnostic's own
+   out-of-fold $R^2$ check used a plain `KFold(shuffle=True)` instead,
+   risking a relational column "predicting itself" via a near-duplicate
+   row from the same replication landing in the opposite fold. Fixed by
+   switching to `GroupKFold(n_splits=5)`, grouped by the 5-bus
+   dataframe's own `replication` column and, for IEEE-14, by the numeric
+   prefix of `scenario_id` (`f"{rep}_{case_name}"` -- splitting on the
+   first underscore isolates `rep` regardless of how many underscores
+   `case_name` itself has, since `rep` is purely numeric). Re-ran both:
+   5-bus $R^2$ moved from 0.958 to 0.956 (median unchanged at 1.000,
+   minimum $0.623\to0.613$); IEEE-14 $R^2$ was unchanged to three decimals
+   (0.966). Both stayed within the ~0.95--0.97 range the reviewer
+   anticipated, so this is a clean, low-consequence fix -- updated the two
+   sub-0.01 figure changes throughout the paper files, no narrative
+   change needed.
+
+3. **One editorial slip, purely a stale cross-reference.** The
+   "Positioning" paragraph comparing against a second literature data
+   point (a knowledge-distilled LightGBM detector's inference cost) still
+   quoted this paper's *pre-timer-fix* state-estimation/inference
+   sub-step numbers (16--17\,ms / $\sim$0.19\,ms/sample) even though the
+   main latency paragraph a few lines earlier already had the corrected,
+   clean-remeasurement figures ($\sim$11--12\,ms / $\sim$0.13\,ms/sample)
+   from the fourth-round update above. Updated to match.
+
+**Verification.** Both `28_...py` and `31_...py` smoke-tested at
+`--n-rep 15` before the full rerun. Full reruns completed without error;
+per-seed and cross-seed numbers extracted directly from the saved CSVs,
+not estimated. `33`'s group-safe determinism confirmed the same way as
+the previous update (re-run twice, identical output). `paper/main.tex`
+recompiles clean (12 pages, same single pre-existing overfull hbox) --
+the added text initially pushed this past 12 pages a second time; trimmed
+several sentences (Abstract, §7 Result/Interpretation, Conclusion) to
+reclaim it without cutting content, the same discipline as the earlier
+12-page recovery in this section's second update. Visually re-read every
+changed page against the source diff before committing.
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,

@@ -4,7 +4,7 @@ import importlib.util
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import KFold
+from sklearn.model_selection import GroupKFold
 from sklearn.linear_model import Ridge
 from sklearn.metrics import r2_score
 
@@ -63,10 +63,20 @@ def load_module(filename, module_name):
     return module
 
 
-def out_of_fold_r2(X, y, seed=0):
-    kf = KFold(n_splits=N_FOLDS, shuffle=True, random_state=seed)
+def out_of_fold_r2(X, y, groups):
+    # FIX (caught in a later audit): this used to be a plain shuffled
+    # KFold, unlike every accuracy result elsewhere in this project, which
+    # is always split at the replication level so a single replication's
+    # matched scenarios (clean/physical/naive/stealth) never straddle
+    # train and test. Switched to GroupKFold(group=replication) for the
+    # same reason: without it, two scenarios from the same replication
+    # (which share a base operating point, and for cyber scenarios the
+    # same target_bus) could land on opposite sides of a fold, letting a
+    # relational column "predict" itself via a near-duplicate row rather
+    # than via genuine non-relational information.
+    gkf = GroupKFold(n_splits=N_FOLDS)
     oof_pred = np.zeros(len(y))
-    for train_idx, test_idx in kf.split(X):
+    for train_idx, test_idx in gkf.split(X, y, groups):
         model = Ridge(alpha=RIDGE_ALPHA)
         model.fit(X[train_idx], y[train_idx])
         oof_pred[test_idx] = model.predict(X[test_idx])
@@ -88,13 +98,14 @@ def run_5bus():
     print(f"relational-only columns to predict   : {len(relational_only)} columns")
 
     X = df[residual_plus_prior].fillna(0.0).to_numpy(dtype=float)
+    groups = df["replication"].to_numpy()
 
     rows = []
     for col in relational_only:
         y = df[col].fillna(0.0).to_numpy(dtype=float)
         if np.std(y) < 1e-12:
             continue
-        r2 = out_of_fold_r2(X, y)
+        r2 = out_of_fold_r2(X, y, groups)
         rows.append({"network": "5-bus", "relational_column": col, "r2": r2})
 
     out = pd.DataFrame(rows)
@@ -125,6 +136,10 @@ def run_ieee14(node_matrix_path, seed_label):
 
     X_by_scenario = wide_local.to_numpy(dtype=float)
     scenario_order = wide_local.index
+    # scenario_id is f"{rep}_{case_name}" (28/31_*.py's one_replication());
+    # rep is purely numeric, so splitting on the first "_" isolates it
+    # regardless of how many underscores case_name itself has.
+    groups = np.array([s.split("_")[0] for s in scenario_order])
 
     rows = []
     for target_node in sorted(node["node"].unique()):
@@ -134,7 +149,7 @@ def run_ieee14(node_matrix_path, seed_label):
             y = node_rows[col].fillna(0.0).to_numpy(dtype=float)
             if np.std(y) < 1e-12:
                 continue
-            r2 = out_of_fold_r2(X_by_scenario, y)
+            r2 = out_of_fold_r2(X_by_scenario, y, groups)
             rows.append({
                 "network": "IEEE-14", "node": target_node,
                 "relational_column": col, "r2": r2,
