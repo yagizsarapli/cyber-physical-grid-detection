@@ -239,11 +239,11 @@ scripts, in the order this session actually ran them:
 python3 exploration/08_multirate_operating_dataset.py   # generates data/phase2e_7day_operating_dataset.csv, required by every script below -- run this first on a clean clone
 python3 22_graph_ready_protected_prior_telemetry_HARD.py --n-rep 500
 python3 23_topology_aware_cyber_physical_localization_HARD.py
-python3 26_multi_seed_replication.py          # ~15-20 min, 4 full reruns
+python3 26_multi_seed_replication.py          # ~15-20 min, 4 full reruns, then auto-restores the primary-seed (20260812) snapshot -- 27 and 33 below both read data/phase2s_hard_graph_feature_matrix.csv directly and need that exact snapshot, not whichever seed this loop last ran
 python3 27_held_out_attack_type_generalization.py
 python3 24_realtime_latency_benchmark_FINAL.py
 python3 28_ieee14_scale_replication.py --n-rep 500   # slower per-replication than the 5-bus scripts; this is the confirmed run (§7 of STATUS.md) -- --n-rep 200 was an earlier, superseded pass
-python3 33_feature_redundancy_diagnostic.py   # must run HERE, not after 30 below -- 30's own seed loop overwrites data/phase2v_ieee14_node_feature_matrix.csv with its last seed (2024), and this script's IEEE-14 R^2 needs the primary-seed (20260921) run 28 just produced, not a multi-seed leftover (see this script's own --help)
+python3 33_feature_redundancy_diagnostic.py   # must run HERE, not after 30 below -- 30's own seed loop overwrites data/phase2v_ieee14_node_feature_matrix.csv with its last seed (2024), and this script's IEEE-14 R^2 needs the primary-seed (20260921) run 28 just produced, not a multi-seed leftover (see this script's own --help). Its 5-bus side is separately safe because 26 above already restored that primary-seed snapshot.
 python3 30_ieee14_multi_seed_replication.py   # ~30-40 min, 4 full reruns of 28
 python3 31_ieee30_scale_replication.py --n-rep 500
 python3 32_ieee30_multi_seed_replication.py   # ~30-40 min, 4 full reruns of 31
@@ -319,7 +319,11 @@ the short version:
 - A committed, reproducible script for the out-of-fold redundancy
   diagnostic (`33_feature_redundancy_diagnostic.py`) now exists; the
   paper's earlier 0.960/0.959 R² numbers were never backed by
-  committed code and have been replaced with 0.950/0.966, the
+  committed code and have been replaced with 0.958/0.966 (a further,
+  separate reproducibility bug -- the 5-bus figure was briefly
+  0.950/0.966 in an intermediate pass that turned out to itself not be
+  reproducible from a clean clone; see `STATUS.md` §6's latest update
+  for the full account), the
   qualitative conclusion unchanged.
 - Two smaller, known-and-documented gaps remain deliberately unresolved:
   cross-network measurement-noise/forecast-uncertainty is not

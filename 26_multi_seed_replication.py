@@ -104,6 +104,25 @@ def main():
     print("\nSaved:\n  results/phase2u_multiseed_replication.csv"
           "\n  results/phase2u_multiseed_summary.csv")
 
+    # FIX (caught in post-submission audit, STATUS.md Sec. 6): the loop
+    # above leaves data/phase2r_hard_*/phase2s_hard_* on disk in whatever
+    # state the LAST seed (SEEDS[-1]) left them, not the primary seed
+    # (SEEDS[0]) this project's other scripts assume when they read those
+    # files directly -- 27_held_out_attack_type_generalization.py and
+    # 33_feature_redundancy_diagnostic.py's 5-bus diagnostic both do this,
+    # and both were silently reading a multi-seed leftover rather than the
+    # documented primary-seed snapshot whenever this script ran first.
+    # Re-running the primary seed here, after the multi-seed summary CSVs
+    # above are already safely saved, restores the canonical snapshot for
+    # every downstream consumer -- a general fix at the source rather than
+    # a special case in each reader.
+    primary_seed = SEEDS[0]
+    print(f"\n=== Restoring primary-seed ({primary_seed}) snapshot for "
+          f"downstream scripts (27, 33) ===")
+    run([sys.executable, "22_graph_ready_protected_prior_telemetry_HARD.py",
+         "--n-rep", str(N_REP), "--seed", str(primary_seed)])
+    run([sys.executable, "23_topology_aware_cyber_physical_localization_HARD.py"])
+
 
 if __name__ == "__main__":
     main()
