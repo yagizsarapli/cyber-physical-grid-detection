@@ -1061,6 +1061,139 @@ already run at 5-bus/IEEE-14), and whether a fourth or fifth network would
 extend, contradict, or add a third pattern to the current
 "each standard IEEE system favors a different task" result.
 
+### Update, 2026-09-23: fourth review round — statistical language, localization protocol, Fig. 4 data source, and a stale Table 1 caught while re-verifying
+
+A fourth review pass of the rewritten paper found four more issues, two
+flagged critical. All four are now addressed; a fifth, unrelated issue
+surfaced while re-verifying the fix for the third one below, and is
+also now fixed.
+
+1. **Statistical overclaim.** "Real"/"genuine" advantage language for the
+   IEEE-30 detection and IEEE-14 localization findings is not defensible at
+   n=4 seeds: a standard t-based 95% CI crosses zero for both
+   ($+0.039\pm0.050$ and $+0.018\pm0.033$), and a distribution-free sign
+   test on 4 same-signed seeds gives one-sided $p=0.5^4=0.0625$, short of
+   0.05. Added an explicit caveat paragraph and a new Limitations item to
+   `paper/main.tex`, and swept "real"/"genuine advantage" language throughout
+   (Abstract, Contributions, Results IV, Discussion, Fig. 4 caption/suptitle,
+   Conclusion) to "positive/never-negative in all four tested seeds" /
+   "consistent in sign." Mirrored into `PAPER_DRAFT.md` and `README.md`.
+   Legitimate non-statistical uses ("a real bug," "a genuinely topology-free
+   ablation") were left alone.
+
+2. **Latency timer wasn't fully end-to-end.** `total_ms` in
+   `24_realtime_latency_benchmark_FINAL.py` summed only 3 of 5 timed stages,
+   silently excluding the post-state-estimation residual/innovation calc and
+   the feature-array-assembly gap. Fixed by timing and summing all 6 stages
+   (`wls`, `poststate_residual_innovation`, `feat`, `assembly`, `pred`,
+   `TOTAL (t5-t0, nothing excluded)`). Three earlier attempts this session
+   were contaminated by unrelated system load (two zombie Node.js processes
+   from an unrelated project, then Steam, both killed with explicit user
+   permission) and deferred rather than forced.
+
+   **Re-measured successfully once the system settled** (load average down
+   to 3.4 from the earlier 6.4-7.3, confirmed via `ps aux` immediately
+   before each run): **11.64ms median, 12.43ms p95, 12.57ms p99, 65.01ms
+   max** — well within the 20ms budget except the single-outlier max, a
+   materially *lower* total than the pre-fix 16.9ms despite the fix adding,
+   not removing, timed work; the two newly-included stages are negligible
+   (well under 0.1ms combined), so this is read as ordinary run-to-run
+   wall-clock variance (a different quantity from the bit-for-bit numerical
+   determinism verified in item 3 — timing is never claimed to be
+   deterministic), not a hidden bug. Given how much the total moved, ran two
+   more independent 300-trial repeats to check: medians 11.64/11.69/11.64ms
+   and p95s 12.43/12.39/12.64ms across all three agreed to within 5%, but
+   the tail did not — max was over budget in all three (65-69ms, same
+   outlier signature each time) while p99 was within budget in two of three
+   and over it in the third (36.2ms), i.e. whether a rare slow-solve trial
+   lands in the top 1% of 300 is itself a coin flip. Reported the most
+   recent run as the headline number and added a sentence describing this
+   cross-run tail variability explicitly, rather than picking whichever run
+   looked best. Updated: Abstract, §5/Results II prose, Fig. 2's waterfall
+   final bar (16.91→11.64), `PAPER_DRAFT.md`, `README.md`. Figures
+   regenerated.
+
+3. **5-bus localization protocol mismatch.** `run_learned_localization()` in
+   `23_topology_aware_cyber_physical_localization_HARD.py` trained (and
+   validated/test-selected) on *all* train-split nodes, including
+   clean/physical-disturbance scenarios where every node is a negative —
+   unlike `28_ieee14_scale_replication.py`/`31_ieee30_scale_replication.py`,
+   which only ever train on cyber-scenario nodes, despite a code comment
+   claiming the two protocols already matched. `rank_localization_metrics()`
+   already filtered to cyber scenarios internally for the *evaluation*
+   metric, so reported top-1/top-2 numbers were never computed over
+   non-cyber rows — only the *training* data composition was wrong. Fixed by
+   adding `node = node[node["is_cyber_graph"] == 1].copy()` as the first
+   line of `run_learned_localization()`, in both `23_..._HARD.py` and
+   `23_..._HARDER.py` (the latter currently unused by any other script, but
+   fixed for consistency). Verified IEEE-14/IEEE-30 already filter correctly
+   (`cyber_nodes = node_df[node_df["is_cyber"] == 1]` before the train/test
+   split) — no change needed there, no rerun needed there.
+
+   Re-ran the full 4-seed 5-bus replication (`26_multi_seed_replication.py`,
+   which also picked up `residual_only` tracking added this round — see item
+   4 below) with the fix applied: detection gap $+0.008\pm0.012$ (range
+   $-0.010$ to $+0.017$, was $+0.003\pm0.010$), localization gap
+   $-0.007\pm0.016$ (range $-0.020$ to $+0.013$, one exact tie; was
+   $+0.005\pm0.036$, two exact ties). **Conclusion unchanged**: both still
+   null/sign-unstable, matching the paper's existing 5-bus story.
+
+   The detection gap's mean also moved slightly despite the fix touching
+   only the localization code path. Verified this is not a bug introduced
+   here: (a) `22_..._HARD.py`'s data generation is bit-identical across two
+   runs at the same seed (MD5-checked); (b) `23_..._HARD.py`'s detection
+   output is bit-identical given fixed input data, checked twice; (c) the
+   pre-fix and post-fix versions of `23_..._HARD.py` (via `git show` on the
+   immediately prior commit) produce byte-identical detection output on
+   identical cached input data. The discrepancy versus the previously-written
+   numbers predates this round and was not chased further (small, within
+   noise) — except where it also surfaced in Table 1, below.
+
+4. **Fig. 4's 5-bus data source.** `29_paper_figures.py` read
+   `phase2s_hard_cyber_detection_metrics.csv`/`..._localization_metrics.csv`
+   directly for the 5-bus panel — these get overwritten by
+   `26_multi_seed_replication.py`'s *last* seed (2024), so Fig. 4 was
+   silently showing one seed's numbers (0.970/0.953), not the true 4-seed
+   mean (0.945/0.938) that Table III correctly used. Root cause of why this
+   went unnoticed: `26_...py`'s `extract_headline()` never tracked
+   `residual_only`, so Table III's `res.` column for 5-bus had to keep a
+   single-primary-seed asterisked fallback, and nobody had switched the rest
+   of Fig. 4's 5-bus data source over to the 4-seed file while that asterisk
+   was still needed for one column. Fixed both: added `residual_only`
+   tracking to `extract_headline()`, then pointed Fig. 4's 5-bus panel at
+   `phase2u_multiseed_replication.csv` (computing means directly, same
+   pattern already used for the IEEE-14/30 panels) instead of the stale
+   single-seed file. The asterisk/footnote in Table III is gone; all four
+   `res.` cells are now genuine 4-seed means.
+
+5. **A stale Table 1 found while re-verifying item 3.** While confirming the
+   localization-protocol fix didn't touch detection (the byte-for-bit checks
+   in item 3), re-ran Table 1's "Hard" condition fresh and found its claimed
+   exact tie on detection (0.950 vs. 0.950) does not reproduce from the
+   current pipeline at all (current: 0.950 vs. 0.937) — a discrepancy that
+   predates this round (same byte-for-bit reasoning as item 3: not caused by
+   this round's fix) but had never been caught. Regenerated both the "Hard"
+   and new "Harder" (+2× noise) rows fresh at the primary seed: detection
+   0.950/0.937 (Hard) and 0.950/0.947 (Harder); localization 0.967/0.967
+   (Hard, still an exact tie) and 0.960/0.967 (Harder). Rewrote Table 1's
+   surrounding prose to describe this accurately (a small, direction-
+   inconsistent single-seed gap, not a clean tie) and pointed the reader at
+   the 4-seed replication immediately below as the test that actually
+   matters — neither column is bolded, matching the existing rule.
+
+**Verification.** `paper/main.tex` recompiles clean (12 pages, same single
+pre-existing 1.98pt overfull hbox, no new warnings) after every edit in this
+round. All 4 figures regenerated from the corrected result files. Changes
+mirrored into `PAPER_DRAFT.md` and `README.md`, including a sweep for
+leftover "exact tie" / "real effect" phrasing in both that the main.tex edit
+had already superseded.
+
+**Not done in this pass**: the 🟡 lower-priority ablation suggestion from
+this same review round (a `node_n_neighbors`/load-bus-degree confound
+check) — flagged as optional by the reviewer, not started. All four
+originally-flagged items (plus the Table 1 bonus finding) are otherwise
+closed as of this update.
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,

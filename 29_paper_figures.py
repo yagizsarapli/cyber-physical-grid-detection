@@ -127,7 +127,7 @@ steps = [
     ("+ Warm-start\n(dead end)", 37.14, CRITICAL),
     ("+ Fast measurement\nupdate (Fix 1)", 22.62, ORANGE),
     ("+ Light classifier\n(Fix 2)", 19.60, ORANGE),
-    ("+ Tolerance/iter tuning\n(N=300, real detector)", 16.91, GOOD),
+    ("+ Tolerance/iter tuning\n(N=300, real detector)", 11.64, GOOD),
 ]
 labels = [s[0] for s in steps]
 values = [s[1] for s in steps]

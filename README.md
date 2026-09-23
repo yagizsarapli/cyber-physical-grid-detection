@@ -39,11 +39,15 @@ adversarial re-read of the same code: those "topology-free" 5-bus
 localization baselines also secretly carried node degree and
 device-role flags that reveal which buses are even attack-eligible --
 a second, independent leak, found only once this project's own central
-finding was audited a second time. With **both** fixed, the fair
-comparison is a near-exact tie on **both tasks**: detection 0.938 vs.
-0.935 (4-seed mean, gap +0.003±0.010, sign unstable) and localization
-0.968 vs. 0.963 (gap +0.005±0.036, sign unstable, including two exact
-ties across the 4 seeds). An earlier, once-corrected pass had reported
+finding was audited a second time. A third fix, found in a later review
+round, restricted localization *training* to cyber-scenario nodes only
+(matching the convention the IEEE-14/30 pipelines already used, despite
+a comment elsewhere claiming the two matched) -- evaluation was always
+cyber-only, only the training-set composition changed. With **all
+three** fixed, the fair comparison is a near-exact tie on **both
+tasks**: detection 0.945 vs. 0.938 (4-seed mean, gap +0.008±0.012, sign
+unstable) and localization 0.958 vs. 0.965 (gap -0.007±0.016, sign
+unstable, including one exact tie across the 4 seeds). An earlier, once-corrected pass had reported
 localization as a topology-free *win* (0.980 vs. 0.993, before the
 degree/role leak was found); that asymmetry is gone once the
 comparison is fair on both sides. **Combining residual and prior
@@ -68,12 +72,12 @@ re-running every network at 4 seeds changed the three-network picture
 a second time, into something more complicated than either earlier
 version:
 
-- **Detection**: null at 5-bus and IEEE-14 (gaps of +0.003±0.010 and
+- **Detection**: null at 5-bus and IEEE-14 (gaps of +0.008±0.012 and
   +0.002±0.013, sign unstable at both) -- but a gap positive in all 4
   tested seeds at IEEE-30 (+0.039±0.032). This specific finding is new
   to this last audit pass; no earlier version of this analysis,
   corrected or not, found a detection advantage anywhere.
-- **Localization**: null at 5-bus and IEEE-30 (+0.005±0.036 and
+- **Localization**: null at 5-bus and IEEE-30 (-0.007±0.016 and
   +0.008±0.018, both sign-unstable) -- but a gap never negative across
   the same 4 seeds at IEEE-14 (+0.018±0.021), the one finding across
   this whole project that has survived every round of correction so
@@ -116,15 +120,23 @@ feature computation -> classification) was profiled against a
 one-cycle (20 ms at 50 Hz) protection-relevant computational target --
 the original 43 ms pipeline turned out to be slow because of a fixable
 software inefficiency, not the model or the estimator's math, and
-fixing it brought the pipeline to 16.9/17.6/18.4 ms at the
-median/p95/p99. That benchmark's own classifier and residual feature
-were also found, in the same audit, to be untrained-on-dummy-data and
-oracle-leaked respectively; re-measured with a classifier trained on
-150 real warm-up scenarios and a deployable residual, the timing
-conclusion is essentially unchanged (16.9 ms vs. the earlier 16.4 ms
+fixing it brought the pipeline to 11.6/12.4/12.6 ms at the
+median/p95/p99 (max 65.0 ms -- a single rare slow-convergence outlier,
+consistent across three repeated runs; p99 crossed budget in one of
+those three, a matter of chance at N=300, not a different pipeline).
+That benchmark's own classifier and residual feature were also found,
+in the same audit, to be untrained-on-dummy-data and oracle-leaked
+respectively; re-measured with a classifier trained on 150 real
+warm-up scenarios and a deployable residual, the timing conclusion was
+essentially unchanged at the time (16.9 ms vs. the earlier 16.4 ms
 median) -- computing a fixed-size result takes the same time whether
 the numbers behind it are real or synthetic, so this was always
-expected to hold, and it did.
+expected to hold, and it did. A later review round found the timer
+itself had silently excluded two of five timed stages (both negligible,
+under 0.1 ms combined); the 11.6/12.4/12.6 ms figures above already
+include all five and are a fresh, independently re-verified measurement
+on a confirmed-quiet machine, not just a re-application of the same
+timer.
 
 **Full story, with every number and why it's trustworthy: [`STATUS.md`](STATUS.md).**
 
