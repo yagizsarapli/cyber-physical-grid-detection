@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-SRC="$ROOT/arxiv"
+PAPER="$ROOT/paper"
 FIG="$ROOT/figures"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -13,7 +13,15 @@ if [[ -f "$ROOT/results/phase2t_latency_final.csv" && "$ROOT/results/phase2t_lat
   exit 1
 fi
 
-cp "$SRC/main.tex" "$SRC/references.bib" "$TMP"/
+cp "$PAPER/main.tex" "$PAPER/references.bib" "$TMP"/
+python3 - "$TMP/main.tex" <<'PY'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+s = s.replace("../figures/", "")
+p.write_text(s)
+PY
 cp "$FIG"/paper_fig1_multiseed_advantage.png "$TMP"/
 cp "$FIG"/paper_fig2_latency_waterfall.png "$TMP"/
 cp "$FIG"/paper_fig3_zeroday_generalization.png "$TMP"/
