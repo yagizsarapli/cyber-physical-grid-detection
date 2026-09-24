@@ -122,33 +122,20 @@ by line against "could a real, deployed detector actually compute
 this." Full per-seed numbers, and the complete before/after account of
 both audit rounds, are in `STATUS.md` §6.
 
-Two further things, checked and re-checked under the same audit and
-essentially unchanged: the detector does **not** generalize to an
-attack type it never trained on (0-1.3% recall when one of two attack
-families is withheld, evaluated under a corrected, symmetric protocol
--- an earlier, asymmetric version of this same test reported 0-4%,
-same conclusion), and the full decision pipeline (state estimation ->
+Two further things remain central. First, the detector does **not**
+generalize to an attack type it never trained on (0-1.3% recall when
+one of two attack families is withheld, under the corrected symmetric
+protocol). Second, the full decision pipeline (state estimation ->
 feature computation -> classification) was profiled against a
-one-cycle (20 ms at 50 Hz) protection-relevant computational target --
-the original 43 ms pipeline turned out to be slow because of a fixable
-software inefficiency, not the model or the estimator's math, and
-fixing it brought the pipeline to 11.6/12.4/12.6 ms at the
-median/p95/p99 (max 65.0 ms -- a single rare slow-convergence outlier,
-consistent across three repeated runs; p99 crossed budget in one of
-those three, a matter of chance at N=300, not a different pipeline).
-That benchmark's own classifier and residual feature were also found,
-in the same audit, to be untrained-on-dummy-data and oracle-leaked
-respectively; re-measured with a classifier trained on 150 real
-warm-up scenarios and a deployable residual, the timing conclusion was
-essentially unchanged at the time (16.9 ms vs. the earlier 16.4 ms
-median) -- computing a fixed-size result takes the same time whether
-the numbers behind it are real or synthetic, so this was always
-expected to hold, and it did. A later review round found the timer
-itself had silently excluded two of five timed stages (both negligible,
-under 0.1 ms combined); the 11.6/12.4/12.6 ms figures above already
-include all five and are a fresh, independently re-verified measurement
-on a confirmed-quiet machine, not just a re-application of the same
-timer.
+one-cycle (20 ms at 50 Hz) computational target. A fresh documented
+N=300 run on Apple arm64 / macOS 15.6.1 (Python 3.12.4,
+pandapower 2.14.10, NumPy 1.26.4, pandas 2.2.2, scikit-learn 1.4.2)
+gave 17.015/18.211/19.190 ms at the median/p95/p99 and 92.657 ms max,
+with 0 convergence failures. Thus the median, p95, and p99 remain
+inside the 20 ms target while rare solver-tail events can exceed it.
+The stage medians make the bottleneck clear: WLS state estimation
+16.664 ms versus 0.057 ms residual/innovation calculation, 0.088 ms
+feature computation, 0.008 ms array assembly, and 0.200 ms inference.
 
 **Full story, with every number and why it's trustworthy: [`STATUS.md`](STATUS.md).**
 
