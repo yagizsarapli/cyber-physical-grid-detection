@@ -1504,6 +1504,91 @@ reclaim it without cutting content, the same discipline as the earlier
 12-page recovery in this section's second update. Visually re-read every
 changed page against the source diff before committing.
 
+### Update, 2026-09-23/24: editorial-voice cleanup, then several rounds
+### of author-driven polish directly to the source, then a fresh
+### documented latency rerun
+
+Two things happened in this stretch, summarized rather than narrated in
+full -- the point of this pass was specifically to get that kind of
+blow-by-blow *out* of the paper's own prose, and duplicating it here in
+just-as-much detail would defeat the purpose.
+
+1. **A full editorial pass separated the audit chronology from the final
+   science.** The paper's prose used to narrate its own debugging history
+   in the Abstract, Introduction, Methodology, Results, and Discussion
+   ("first pass appeared to show X, then a bug was found, then a second
+   audit found Y..."). Rewrote throughout to state only the final,
+   corrected methodology and results, with one brief technical mention
+   per correction category (kept deliberately, not hidden) and the full
+   before/after chronology left here in §6 where it already lived.
+   `paper/main.tex` dropped from 12 to 10 pages with zero loss of any
+   verified number or statistical caveat. Followed by two further rounds
+   of smaller phrasing fixes (a Limitations cross-reference bug, several
+   "real"/"more likely"/informal-register cleanups) -- see `git log
+   --oneline paper/main.tex` for the individual commits if the exact
+   wording history matters; it isn't re-narrated here.
+2. **Several rounds of author-driven polish landed directly on `main`**,
+   reviewed and verified after the fact rather than authored in this
+   session: a genuine factual fix (the paper had been saying "three
+   independently-implemented pipelines," but IEEE-14 and IEEE-30 actually
+   share one size-agnostic implementation -- three networks, two
+   pipelines, not three of each); an author-affiliation fix (the IEEE
+   author block had a degree title where a department name belongs);
+   honest venue-status framing (this file is a full manuscript/preprint,
+   not implied SmartGridComm-compliant); a bibliography upgrade (6 entries
+   moved from arXiv preprints to their verified published versions with
+   DOIs -- spot-checked 2 of the new DOIs directly against the CrossRef
+   API, both resolved to exactly the cited paper); and reproducibility
+   metadata (`24_realtime_latency_benchmark_FINAL.py` now records and
+   saves the exact machine/library-version environment alongside every
+   latency run, instead of the benchmark script staying silent about it).
+3. **A fresh, fully-environment-documented latency rerun replaced the
+   three-run stability-check framing from the update above.** New result,
+   confirmed directly against `results/phase2t_latency_final.csv` and
+   `results/phase2t_latency_environment.json` on disk (not just the
+   commit message): **17.015 / 18.211 / 19.190\,ms** median/p95/p99,
+   **92.657\,ms** max, 0 convergence failures, on Apple arm64 / macOS
+   15.6.1 / Python 3.12.4 / pandapower 2.14.10. Stage medians: WLS
+   16.664\,ms, post-estimation residual/innovation 0.057\,ms, feature
+   computation 0.088\,ms, array assembly 0.008\,ms, inference 0.200\,ms
+   -- sums to the reported total exactly. `29_paper_figures.py`'s Fig. 2
+   now reads its final bar from this CSV dynamically instead of a
+   hardcoded value, so it cannot silently drift from the manuscript again
+   after a future rerun.
+
+   **Worth flagging explicitly, not silently overwriting**: this is the
+   *fourth* latency measurement taken on this same machine this project
+   (16.9\,ms original-era baseline; three back-to-back runs in this
+   section's second update at 11.6--11.7\,ms; now 17.0\,ms). The median
+   alone has ranged 11.6--17.0\,ms across these four runs -- a larger
+   swing than the $\pm5\%$ stability the three-run check found *among
+   itself*, meaning whatever varies between sessions on this machine
+   (thermal state, background load, something else not isolated) has
+   more effect than run-to-run noise within one sitting. This run's own
+   p99 (19.190\,ms) is now inside the 20\,ms budget by only 0.81\,ms --
+   a closer call than the three-run update's p99s (12.4--12.7\,ms in two
+   of three runs). The qualitative conclusion (WLS state estimation
+   dominates; median and p95 are typically in-budget; the tail is not
+   reliably) is unchanged, and reporting one clean, fully-documented run
+   is a legitimate simplification of the three-run framing -- but a
+   reader should not take 17.0\,ms, or the earlier 11.6\,ms, as *the*
+   number this pipeline always produces on this hardware. Left as the
+   author's call whether to add this variability back into the paper's
+   own Limitations item; not done unilaterally here.
+
+**Verification.** All new numbers in `paper/main.tex`/`PAPER_DRAFT.md`/
+`README.md` checked directly against the CSV/JSON files on disk, not
+taken from the commit diffs alone. Found and fixed one mirroring gap the
+author's own commits missed: `PAPER_DRAFT.md`'s Abstract and Limitations
+item 6 still had the old 11.6--12.6\,ms figures and the generic "one
+machine" phrasing after the "Mirror documented final latency benchmark"
+commit -- the Results II body paragraph had been updated correctly, the
+Abstract had not. Two bibliography DOIs spot-checked against CrossRef
+directly. Full `pdflatex` $\to$ `bibtex` $\to$ `pdflatex` $\times 2$
+rebuild: no bibtex warnings, no undefined citations, still 10 pages,
+same single pre-existing overfull hbox. Fig. 2 regenerated and visually
+confirmed to read the new value.
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,
