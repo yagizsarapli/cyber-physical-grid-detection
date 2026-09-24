@@ -246,7 +246,7 @@ python3 22_graph_ready_protected_prior_telemetry_HARD.py --n-rep 500
 python3 23_topology_aware_cyber_physical_localization_HARD.py
 python3 26_multi_seed_replication.py          # ~15-20 min, 4 full reruns, then auto-restores the primary-seed (20260812) snapshot -- 27 and 33 below both read data/phase2s_hard_graph_feature_matrix.csv directly and need that exact snapshot, not whichever seed this loop last ran
 python3 27_held_out_attack_type_generalization.py
-python3 24_realtime_latency_benchmark_FINAL.py
+python3 24_realtime_latency_benchmark_FINAL.py   # also records results/phase2t_latency_environment.json (machine + software versions) for reproducible latency reporting
 python3 28_ieee14_scale_replication.py --n-rep 500   # slower per-replication than the 5-bus scripts; this is the confirmed run (§7 of STATUS.md) -- --n-rep 200 was an earlier, superseded pass
 python3 33_feature_redundancy_diagnostic.py   # must run HERE, not after 30 below -- 30's own seed loop overwrites data/phase2v_ieee14_node_feature_matrix.csv with its last seed (2024), and this script's IEEE-14 R^2 needs the primary-seed (20260921) run 28 just produced, not a multi-seed leftover (see this script's own --help). Its 5-bus side is separately safe because 26 above already restored that primary-seed snapshot.
 python3 30_ieee14_multi_seed_replication.py   # ~30-40 min, 4 full reruns of 28
