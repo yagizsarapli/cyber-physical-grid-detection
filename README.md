@@ -127,15 +127,15 @@ generalize to an attack type it never trained on (0-1.3% recall when
 one of two attack families is withheld, under the corrected symmetric
 protocol). Second, the full decision pipeline (state estimation ->
 feature computation -> classification) was profiled against a
-one-cycle (20 ms at 50 Hz) computational target. A fresh documented
-N=300 run on Apple arm64 / macOS 15.6.1 (Python 3.12.4,
-pandapower 2.14.10, NumPy 1.26.4, pandas 2.2.2, scikit-learn 1.4.2)
-gave 17.015/18.211/19.190 ms at the median/p95/p99 and 92.657 ms max,
-with 0 convergence failures. Thus the median, p95, and p99 remain
-inside the 20 ms target while rare solver-tail events can exceed it.
-The stage medians make the bottleneck clear: WLS state estimation
-16.664 ms versus 0.057 ms residual/innovation calculation, 0.088 ms
-feature computation, 0.008 ms array assembly, and 0.200 ms inference.
+one-cycle (20 ms at 50 Hz) computational target. Two documented independent N=300 reruns on Apple arm64 / macOS
+15.6.1 (Python 3.12.4, pandapower 2.14.10, NumPy 1.26.4,
+pandas 2.2.2, scikit-learn 1.4.2), both with 0 convergence failures,
+gave 16.155-17.015 / 16.429-18.211 / 16.952-19.190 ms across the
+median/p95/p99 and 89.067-92.657 ms maxima. Thus median, p95, and p99
+remain inside the 20 ms target in both reruns while rare solver-tail
+events exceed it. Stage medians remain dominated by WLS state
+estimation (15.855-16.664 ms) rather than residual/feature/inference
+work.
 
 **Full story, with every number and why it's trustworthy: [`STATUS.md`](STATUS.md).**
 
