@@ -78,7 +78,7 @@ Detection shows a small edge for `topology_fusion` at this one seed, in both con
 
 Following [4]'s finding that fast classifiers can sit inside a slow end-to-end pipeline, we measured the full per-cycle decision pipeline against a one-cycle (20ms at the network's confirmed 50Hz) target, with one-time setup excluded.
 
-**Initial measurement.** median 42.98ms, 2.15x over budget (RandomForest, tolerance=1e-7, maximum_iterations=40, flat init every cycle).
+**Initial measurement.** Median 42.98ms, 2.15x over budget (RandomForest, tolerance=1e-7, maximum_iterations=40, flat init every cycle).
 
 **Warm-start test.** Warm-starting produced only a 1.06x speedup (37.14ms).
 
