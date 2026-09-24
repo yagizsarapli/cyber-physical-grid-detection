@@ -2,9 +2,14 @@ from pathlib import Path
 import time
 import importlib.util
 import warnings
+import json
+import platform
+import sys
 
 import numpy as np
 import pandas as pd
+import pandapower as pp
+import sklearn
 
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -91,6 +96,23 @@ def main():
 
     print("\n=== PHASE 2T FINAL: N=300, all fixes combined ===")
     print(f"Budget (net.f_hz={topology.build_microgrid().f_hz} Hz): {CYCLE_MS:.2f} ms/cycle")
+
+    # Reproducibility metadata for machine-dependent latency claims.
+    # The paper should report the exact benchmark environment rather than
+    # only saying "one machine"; this block records it automatically on rerun.
+    environment = {
+        "platform": platform.platform(),
+        "machine": platform.machine(),
+        "processor": platform.processor(),
+        "python": sys.version.split()[0],
+        "pandapower": pp.__version__,
+        "numpy": np.__version__,
+        "pandas": pd.__version__,
+        "scikit_learn": sklearn.__version__,
+    }
+    print("Benchmark environment:")
+    for key, value in environment.items():
+        print(f"  {key}: {value}")
 
     net = topology.build_microgrid()
     phase21.configure_context(net, slow.iloc[0])
@@ -274,7 +296,9 @@ def main():
 
     RESULTS.mkdir(exist_ok=True)
     summary.to_csv(RESULTS / "phase2t_latency_final.csv", index=False)
-    print("\nSaved:\n  results/phase2t_latency_final.csv")
+    with open(RESULTS / "phase2t_latency_environment.json", "w", encoding="utf-8") as fh:
+        json.dump(environment, fh, indent=2)
+    print("\nSaved:\n  results/phase2t_latency_final.csv\n  results/phase2t_latency_environment.json")
 
 
 if __name__ == "__main__":
