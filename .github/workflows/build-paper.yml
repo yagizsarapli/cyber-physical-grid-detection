@@ -22,7 +22,7 @@ jobs:
       - name: Install LaTeX and Python plotting dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-science python3-matplotlib zip
+          sudo apt-get install -y texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-science texlive-publishers python3-matplotlib zip
 
       - name: Regenerate final latency figure from documented latest run
         run: |
