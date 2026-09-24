@@ -1,0 +1,164 @@
+name: Build final paper
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'paper/main.pdf'
+      - 'arxiv_preview.pdf'
+      - 'figures/paper_fig2_latency_waterfall.png'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install LaTeX and Python plotting dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-science python3-matplotlib zip
+
+      - name: Regenerate final latency figure from documented latest run
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import numpy as np
+          import matplotlib.pyplot as plt
+
+          FIGURES = Path("figures")
+          FIGURES.mkdir(exist_ok=True)
+
+          BLUE = "#2a78d6"
+          ORANGE = "#eb6834"
+          GOOD = "#0ca30c"
+          CRITICAL = "#d03b3b"
+          INK = "#0b0b0b"
+          INK_SECONDARY = "#52514e"
+          INK_MUTED = "#898781"
+          GRIDLINE = "#e1e0d9"
+          BASELINE = "#c3c2b7"
+          SURFACE = "#fcfcfb"
+
+          plt.rcParams.update({
+              "font.family": "sans-serif",
+              "font.sans-serif": ["Helvetica", "Arial", "DejaVu Sans"],
+              "axes.edgecolor": BASELINE,
+              "axes.labelcolor": INK,
+              "text.color": INK,
+              "xtick.color": INK_SECONDARY,
+              "ytick.color": INK_SECONDARY,
+              "figure.facecolor": SURFACE,
+              "axes.facecolor": SURFACE,
+              "savefig.facecolor": SURFACE,
+          })
+
+          def style_axes(ax, ygrid=True):
+              ax.spines["top"].set_visible(False)
+              ax.spines["right"].set_visible(False)
+              ax.spines["left"].set_color(BASELINE)
+              ax.spines["bottom"].set_color(BASELINE)
+              if ygrid:
+                  ax.yaxis.grid(True, color=GRIDLINE, linewidth=1, zorder=0)
+                  ax.set_axisbelow(True)
+              ax.tick_params(length=0)
+
+          def bar_labels(ax, bars, fmt="{:.1f} ms", dy=0.6):
+              for b in bars:
+                  h = b.get_height()
+                  ax.annotate(fmt.format(h), (b.get_x()+b.get_width()/2, h+dy),
+                              ha="center", va="bottom", fontsize=9.5, color=INK)
+
+          # Latest documented N=300 run reported in paper/main.tex:
+          final_median_ms = 16.154562
+
+          steps = [
+              ("Original\n(RandomForest, flat init)", 42.98, INK_MUTED),
+              ("+ Warm-start\n(dead end)", 37.14, CRITICAL),
+              ("+ Fast measurement\nupdate (Fix 1)", 22.62, ORANGE),
+              ("+ Light classifier\n(Fix 2)", 19.60, ORANGE),
+              ("+ Final tuned pipeline\n(N=300, real detector)", final_median_ms, GOOD),
+          ]
+          labels=[s[0] for s in steps]
+          values=[s[1] for s in steps]
+          colors=[s[2] for s in steps]
+
+          fig, ax = plt.subplots(figsize=(8.5,4.6))
+          x=np.arange(len(steps))
+          bars=ax.bar(x, values, color=colors, width=0.6, zorder=3)
+          ax.axhline(20.0, color=INK, linewidth=1.4, linestyle=(0,(4,3)), zorder=2)
+          ax.annotate("20 ms budget (1 cycle @ 50 Hz)", xy=(0.6,20.0),
+                      xytext=(0.6,23.2), ha="left", fontsize=9, color=INK)
+          ax.set_xticks(x)
+          ax.set_xticklabels(labels, fontsize=8.8)
+          ax.set_ylabel("Median end-to-end latency (ms)")
+          bar_labels(ax,bars)
+          style_axes(ax)
+          ax.set_ylim(0,50)
+          fig.suptitle("Phase 2T: closing the latency gap by fixing the actual bottleneck",
+                       fontsize=11.5, color=INK)
+          fig.text(0.5,-0.03,
+                   "Warm-start (the first hypothesis) barely helped. The measurement-table\n"
+                   "rebuild fix (Fix 1) did most of the work; a lighter classifier (Fix 2) did the rest.",
+                   ha="center", fontsize=8.5, color=INK_MUTED)
+          fig.tight_layout()
+          fig.savefig(FIGURES/"paper_fig2_latency_waterfall.png", dpi=200, bbox_inches="tight")
+          plt.close(fig)
+          PY
+
+      - name: Compile canonical manuscript
+        run: |
+          cd paper
+          pdflatex -interaction=nonstopmode -halt-on-error main.tex
+          bibtex main
+          pdflatex -interaction=nonstopmode -halt-on-error main.tex
+          pdflatex -interaction=nonstopmode -halt-on-error main.tex
+          if grep -Eiq 'undefined references|Citation .* undefined|Reference .* undefined|There were undefined references|LaTeX Error|Emergency stop|Fatal error occurred' main.log; then
+            echo "LaTeX log contains unresolved references or fatal errors."
+            exit 1
+          fi
+
+      - name: Build arXiv preview and source ZIP
+        run: |
+          cp paper/main.pdf arxiv_preview.pdf
+          TMP="$(mktemp -d)"
+          cp paper/main.tex paper/references.bib "$TMP"/
+          python3 - "$TMP/main.tex" <<'PY'
+          from pathlib import Path
+          import sys
+          p=Path(sys.argv[1])
+          s=p.read_text()
+          p.write_text(s.replace("../figures/",""))
+          PY
+          cp figures/paper_fig1_multiseed_advantage.png "$TMP"/
+          cp figures/paper_fig2_latency_waterfall.png "$TMP"/
+          cp figures/paper_fig3_zeroday_generalization.png "$TMP"/
+          cp figures/paper_fig4_scale_comparison.png "$TMP"/
+          (cd "$TMP" && zip -j "$GITHUB_WORKSPACE/arxiv_submission.zip" main.tex references.bib paper_fig*.png)
+
+      - name: Commit refreshed PDF
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add paper/main.pdf arxiv_preview.pdf figures/paper_fig2_latency_waterfall.png
+          if git diff --cached --quiet; then
+            echo "No generated-file changes to commit."
+          else
+            git commit -m "Rebuild final manuscript PDF"
+            git push
+          fi
+
+      - name: Upload final paper artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-paper
+          path: |
+            paper/main.pdf
+            arxiv_preview.pdf
+            arxiv_submission.zip
+          if-no-files-found: error
