@@ -28,14 +28,15 @@ over `prior_only` alone is real and large; it was never a topology
 effect.
 
 After profiling and fixing the actual latency bottleneck (a software
-inefficiency, not the classifier), a final documented N=300 rerun on
-Apple arm64 / macOS 15.6.1 (Python 3.12.4, pandapower 2.14.10,
-NumPy 1.26.4, pandas 2.2.2, scikit-learn 1.4.2) gives
-17.015 / 18.211 / 19.190 ms at the median/p95/p99, with 0 convergence
-failures; the maximum is 92.657 ms. Thus typical and p99 latency remain
-within the 20 ms target on this environment, while a rare solver-tail
-event exceeds it. Stage medians are dominated by WLS state estimation
-(16.664 ms) rather than residual/feature/inference work.
+inefficiency, not the classifier), two documented independent N=300
+reruns on Apple arm64 / macOS 15.6.1 (Python 3.12.4,
+pandapower 2.14.10, NumPy 1.26.4, pandas 2.2.2, scikit-learn 1.4.2),
+both with 0 convergence failures, give 16.155-17.015 /
+16.429-18.211 / 16.952-19.190 ms across the median/p95/p99 and
+89.067-92.657 ms maxima. Thus median, p95, and p99 remain within the
+20 ms target in both reruns, while rare solver-tail events exceed it.
+Stage medians are dominated by WLS state estimation
+(15.855-16.664 ms) rather than residual/feature/inference work.
 
 Tested at a bigger, standard scale (IEEE 14-bus, §5) at three
 escalating sample sizes, ending at n=500 — matching the 5-bus study's
