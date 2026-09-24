@@ -122,12 +122,21 @@ plt.close(fig)
 # ============================================================
 # Figure 2 -- §5 latency waterfall
 # ============================================================
+# The final bar is read from the current N=300 end-to-end benchmark
+# output instead of being hard-coded, so the figure cannot silently
+# drift out of sync with the manuscript after a fresh latency run.
+latency_summary = pd.read_csv(RESULTS / "phase2t_latency_final.csv")
+final_row = latency_summary[
+    latency_summary["stage"] == "TOTAL (t5-t0, nothing excluded)"
+].iloc[0]
+final_median_ms = float(final_row["median_ms"])
+
 steps = [
     ("Original\n(RandomForest, flat init)", 42.98, INK_MUTED),
     ("+ Warm-start\n(dead end)", 37.14, CRITICAL),
     ("+ Fast measurement\nupdate (Fix 1)", 22.62, ORANGE),
     ("+ Light classifier\n(Fix 2)", 19.60, ORANGE),
-    ("+ Tolerance/iter tuning\n(N=300, real detector)", 11.64, GOOD),
+    ("+ Final tuned pipeline\n(N=300, real detector)", final_median_ms, GOOD),
 ]
 labels = [s[0] for s in steps]
 values = [s[1] for s in steps]
