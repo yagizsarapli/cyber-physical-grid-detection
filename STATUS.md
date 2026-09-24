@@ -1,8 +1,7 @@
 # GRIDRA Cyber-Physical Microgrid — Status
 
-Last updated: 2026-09-23 (§6's second dated update -- read §6 in full
-before trusting anything else in this file; everything before it is
-pre-audit and superseded). Supersedes the "Current backbone / Next"
+Last updated: 2026-09-24 (final documented latency rerun added; §6
+still contains the authoritative post-audit model/feature results). Supersedes the "Current backbone / Next"
 section in `README.md`, which only described the Aug-11 starting point
 and was never updated through phases 2B–2T.
 
@@ -29,10 +28,14 @@ over `prior_only` alone is real and large; it was never a topology
 effect.
 
 After profiling and fixing the actual latency bottleneck (a software
-inefficiency, not the model), the full pipeline meets the 20ms budget
-at the median, p95, and p99 (16.4 / 17.0 / 17.1 ms), with a single
-outlier over 300 trials still exceeding it (21.3 ms max) — this part
-of the finding is unaffected by the §2.5 correction.
+inefficiency, not the classifier), a final documented N=300 rerun on
+Apple arm64 / macOS 15.6.1 (Python 3.12.4, pandapower 2.14.10,
+NumPy 1.26.4, pandas 2.2.2, scikit-learn 1.4.2) gives
+17.015 / 18.211 / 19.190 ms at the median/p95/p99, with 0 convergence
+failures; the maximum is 92.657 ms. Thus typical and p99 latency remain
+within the 20 ms target on this environment, while a rare solver-tail
+event exceeds it. Stage medians are dominated by WLS state estimation
+(16.664 ms) rather than residual/feature/inference work.
 
 Tested at a bigger, standard scale (IEEE 14-bus, §5) at three
 escalating sample sizes, ending at n=500 — matching the 5-bus study's
