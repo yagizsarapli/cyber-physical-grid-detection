@@ -34,7 +34,7 @@ yagiz.sarapli@tu-dortmund.de}
 \maketitle
 
 \begin{abstract}
-Distinguishing a cyber false-data-injection attack (FDIA) from a legitimate physical disturbance, localizing it, and doing so within a protection-relevant time budget are usually studied separately. We study detection and localization across three networks -- a synthetic inverter-dominated 5-bus microgrid and the standard IEEE 14-bus and 30-bus test systems -- with a weighted-least-squares (WLS) AC state estimator, to test whether explicit topology-relational features help, under an evaluation enforcing strict separation between relational and non-relational feature sets, deployable WLS residuals rather than oracle state, and validation-only model selection. Against this matched, topology-free ablation, a 16-seed replication (quadrupling an original four-seed pilot) shows the gap is network-specific rather than task-specific: at both standard IEEE test systems, topology-relational features give a small, mostly statistically confirmed advantage on both detection and localization (IEEE 14-bus: $+0.009\pm0.012$ detection, $+0.018\pm0.017$ localization; IEEE 30-bus: $+0.028\pm0.019$ detection, $+0.013\pm0.016$ localization; three of the four 95\% CIs exclude zero after a multiple-comparisons correction), while the small custom 5-bus microgrid shows no such advantage on either task ($-0.000\pm0.009$ and $+0.003\pm0.017$). Separately profiling the full decision pipeline on the 5-bus implementation against a one-cycle (20\,ms) budget, on a documented Apple-arm64/macOS 15.6.1 environment, gives, across two independent $N{=}300$ reruns, 16.2--17.0\,ms median, 16.4--18.2\,ms p95, and 17.0--19.2\,ms p99 latency, while rare solver-tail maxima reach 89.1--92.7\,ms. Neither feature set generalizes to a completely unseen attack type (0--1.3\% recall, vs.\ 91--100\% when that type is in training).
+Distinguishing cyber false-data-injection attacks (FDIAs) from legitimate physical disturbances requires accurate detection, localization, and sufficiently fast end-to-end processing. We evaluate the marginal value of explicit topology-relational features across a synthetic 5-bus microgrid and standard IEEE 14-bus and 30-bus systems using deployable WLS residuals, validation-only model selection, and a matched topology-free residual-plus-prior ablation. Across 16 independent seeds, topology features are neutral on the 5-bus system (detection gap $-0.000\pm0.009$; localization $+0.003\pm0.017$) but produce small positive gaps at both IEEE systems (IEEE 14-bus: $+0.009\pm0.012$ detection, $+0.018\pm0.017$ localization; IEEE 30-bus: $+0.028\pm0.019$ detection, $+0.013\pm0.016$ localization). Four unadjusted 95\% confidence intervals exclude zero; three effects (IEEE-14 localization, IEEE-30 detection, IEEE-30 localization) remain significant under a Bonferroni correction, while IEEE-14 detection does not. Separately, pipeline profiling reduces median end-to-end latency from 42.98\,ms to 16.2--17.0\,ms, with p99 at 17.0--19.2\,ms but rare maxima of 89.1--92.7\,ms. Finally, neither feature set generalizes to a completely unseen attack type (0--1.3\% recall versus 91--100\% when represented in training). The results show that topology benefits are network-specific, upstream software costs dominate real-time latency, and unseen attack mechanisms remain a major limitation.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -248,7 +248,7 @@ Loc., IEEE-30 & 0.901 & 0.888 & 0.510 & 0.430 \\
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{paper_fig4_scale_comparison.png}
-\caption{5-bus vs.\ IEEE 14-bus vs.\ IEEE 30-bus, all 16-seed means, all four feature sets. The gap is network-specific, not task-specific: null on both tasks at 5-bus, a small but mostly statistically confirmed advantage on both tasks at IEEE 14-bus and IEEE 30-bus (Table~\ref{tab:gapstats}).}
+\caption{5-bus vs.\ IEEE 14-bus vs.\ IEEE 30-bus, all 16-seed means, all four feature sets. The gap is network-specific, not task-specific: null on both tasks at 5-bus and positive on both tasks at IEEE 14-bus and IEEE 30-bus; Table~\ref{tab:gapstats} reports uncertainty and multiple-comparisons-aware significance.}
 \label{fig:scale}
 \end{figure}
 
@@ -273,7 +273,7 @@ IEEE-30 & Loc. & $+0.013\pm0.016$ & $[+0.004,+0.022]$ & 0.018 & 0.007 \\
 }
 
 \smallskip
-\footnotesize Sign test excludes exact ties. A Bonferroni correction for 6 simultaneous tests needs $p<0.0083$ (family-wise 95\%): three of the four positive gaps clear it; IEEE-14 detection ($p=0.011$) does not.
+\footnotesize Sign test excludes exact ties. Using the two-sided $t$-test $p$-values, a Bonferroni correction for 6 simultaneous tests requires $p<0.0083$ (family-wise 95\%): three of the four positive IEEE gaps clear it; IEEE-14 detection ($p=0.011$) does not.
 \end{table}
 
 \subsection{Cross-Network Result}
