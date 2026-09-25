@@ -19,33 +19,12 @@ from sklearn.metrics import balanced_accuracy_score, recall_score, f1_score, roc
 warnings.filterwarnings("ignore")
 
 # ============================================================
-# PHASE 2V -- SCALE REPLICATION ON A STANDARD TEST SYSTEM (IEEE 14-BUS)
+# IEEE 14-BUS SCALE REPLICATION
 # ============================================================
-#
-# The one limitation left unaddressed in STATUS.md: everything so far
-# ran on a custom 5-bus toy microgrid. This asks whether the core
-# finding -- topology-aware features help detection/localization over
-# a simpler prior-based baseline -- replicates on IEEE 14-bus, the
-# most standard, most commonly cited test system in the power-system
-# state-estimation/FDIA literature specifically (unlike the CIGRE MV
-# benchmark, which was tried first and rejected here: pandapower
-# represents its internal switches with auxiliary ppc buses, breaking
-# this project's h_ac()'s bus-index assumptions; IEEE 14-bus has none
-# of that and the existing WLS/attack machinery works on it unmodified).
-#
-# Scope, stated honestly: this is a focused pilot on the CENTRAL
-# question (does topology-fusion beat prior-only at detection and
-# localization at a bigger, standard scale), not a full re-run of
-# every phase (no hard-negative/zero-day/latency work here). Features
-# are deliberately redesigned to be size-agnostic (global summary
-# statistics + argmax-node topology context) rather than the original
-# fixed per-bus columns (b0_.../b4_...), since those don't generalize
-# past N=5 -- this is a genuine design improvement, not just a copy.
-#
-# Every WLS/measurement/attack function below is imported UNMODIFIED
-# from 21_..._HARD.py -- build_measurement_model/h_ac/measurement_schema
-# all operate generically on net.bus.index/net.line.index/model["n_bus"],
-# confirmed by inspection and by this script's own smoke test.
+# Evaluate detection and localization on the standard IEEE 14-bus
+# system using the same WLS/attack machinery as the 5-bus study and a
+# size-agnostic feature representation. Model selection is performed on
+# the validation split; the test split is reserved for final reporting.
 # ============================================================
 
 ROOT = Path(__file__).resolve().parent
@@ -263,16 +242,9 @@ def feature_sets(df):
     # 5-bus study's feature_columns(). residual_plus_prior is the new,
     # fair, topology-free union.
     #
-    # FIX (caught in a still-later audit): argmax_n_neighbors is raw node
-    # degree -- static graph structure, not a scenario-specific neighbor
-    # COMPARISON like argmax_neighbor_mean/max/local_minus_neighbor. Since
-    # target_bus is always drawn from load_buses only (one_replication(),
-    # never generator/slack buses), degree could let a model learn "which
-    # bus types are typically targets" as a static prior rather than
-    # anything about this scenario's actual residual/innovation pattern --
-    # exactly the reasoning that already removed raw `degree` from every
-    # 5-bus feature set, topology_fusion included (STATUS.md Sec. 6). For
-    # three-network consistency, topology_fusion here excludes it too now.
+    # Raw node degree is excluded because it is static structural metadata,
+    # not a scenario-specific neighbor comparison, and can encode target
+    # eligibility when attacks are restricted to load buses.
     res_all = [c for c in df.columns if c.startswith("res_") or c.startswith("resnode_")]
     innov_all = [c for c in df.columns if c.startswith("innov_") or c.startswith("innovnode_")]
     residual_only = [c for c in res_all if "neighbor" not in c]
@@ -352,13 +324,8 @@ def main():
 
     det_rows = []
     loc_rows = []
-    # FIX (caught in post-submission audit): the validation split was
-    # constructed above but never used -- all 3 models were fit on
-    # train and scored directly on test, then the best test score was
-    # reported. That is test-set model selection (optimistic bias).
-    # Now: fit all 3 on train, pick the model with the best VALIDATION
-    # balanced accuracy per feature set, and report only that model's
-    # (unseen) test performance -- the test set is touched exactly once.
+    # Select the classifier per feature set using validation balanced
+    # accuracy, then evaluate that selected model once on the test split.
     for fname, cols in feats.items():
         X_train, y_train = df.loc[train_mask, cols], df.loc[train_mask, "is_cyber"]
         X_val, y_val = df.loc[val_mask, cols], df.loc[val_mask, "is_cyber"]
@@ -392,11 +359,8 @@ def main():
     # Same correction as feature_sets() above: node_res_nb_mean/nb_max/
     # local_minus_nb are relational/structural, not local -- they do not
     # belong in a topology-free baseline. node_n_neighbors (raw degree) is
-    # excluded from topology_fusion entirely, same reasoning as
-    # feature_sets() above and as the 5-bus study's own degree removal:
-    # static structure, not a scenario-specific neighbor comparison, and a
-    # possible target-eligibility leak since attacks only ever target load
-    # buses.
+    # node_n_neighbors is excluded from topology_fusion for the same
+    # target-eligibility reason as in feature_sets().
     node_feat_sets = {
         "residual_only": ["node_res"],
         "prior_only": ["node_innov"],

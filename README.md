@@ -38,7 +38,6 @@ The cross-network result is intentionally interpreted as **setup-dependent**: th
 | `exploration/08_multirate_operating_dataset.py` | Generates the operating dataset required by the main experiments |
 | `archive/`, `exploration/archive/` | Superseded exploratory scripts; not used for reported manuscript results |
 | `RELATED_WORK.md` | Literature notes |
-| `STATUS.md` | Detailed research/audit log |
 
 Generated `data/` and `results/` directories are gitignored.
 

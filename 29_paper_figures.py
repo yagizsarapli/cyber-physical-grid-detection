@@ -69,13 +69,9 @@ def bar_labels(ax, bars, fmt="{:.3f}", dy=0.012, color=INK):
 
 
 # ============================================================
-# Figure 1 -- §4 headline: multi-seed detection + localization.
-# topology_fusion vs. the no-topology residual_plus_prior ablation
-# (the fair comparison -- feature_columns() originally let
-# topology-relational columns leak into residual_only/prior_only by
-# name-substring collision; residual_plus_prior is the corrected,
-# genuinely topology-free union of the two). prior_only alone is kept
-# for scale: it shows how much of the old "topology" gain was really
+# Figure 1 -- 5-bus multi-seed detection and localization.
+# Compare topology_fusion with the matched topology-free
+# residual_plus_prior ablation; prior_only is retained for context.
 # just prior_only missing residual information it already had access to.
 # ============================================================
 seeds = pd.read_csv(RESULTS / "phase2u_multiseed_replication.csv")
@@ -216,13 +212,8 @@ loc5 = {
     "residual_only": seeds["residual_only_best_localization_top1"].mean(),
 }
 
-# IEEE-14: use the 4-seed mean (phase2w_..., from
-# 30_ieee14_multi_seed_replication.py), not the single-run
-# phase2v_... file -- that file gets overwritten by the last seed in
-# the multi-seed loop, so it no longer reflects any one intentional
-# run, and Table III/IV in the paper now report 4-seed means for
-# IEEE-14 anyway. Consistent with det5/loc5 above using max() per
-# feature set (best model), mirrored here per feature set across seeds.
+# IEEE-14: use the 16-seed replication summary rather than the
+# single-run file, which is overwritten during the multi-seed loop.
 det14w = pd.read_csv(RESULTS / "phase2w_ieee14_multiseed_replication.csv")
 det14_best = {
     "topology_fusion": det14w["topology_fusion_det"].mean(),
@@ -237,15 +228,7 @@ loc14_best = {
     "residual_only": det14w["residual_only_loc"].mean(),
 }
 
-# IEEE-30: use the 4-seed mean (phase2y_..., from
-# 32_ieee30_multi_seed_replication.py), not the single-run phase2x_...
-# file -- same reason as IEEE-14 above (that file gets overwritten by
-# the last seed in the multi-seed loop). Post-audit (STATUS.md Sec. 6):
-# after fixing the oracle-leaked residual and test-set model selection,
-# IEEE-30 detection shows a gap positive in all 4 tested seeds (new to
-# the audit, not present in any earlier version; not yet a statistically
-# confirmed effect at this seed count -- see paper's Sec. VII caveat);
-# localization stays null/sign-unstable, unchanged in character.
+# IEEE-30: use the 16-seed replication summary for the same reason.
 det30w = pd.read_csv(RESULTS / "phase2y_ieee30_multiseed_replication.csv")
 det30_best = {
     "topology_fusion": det30w["topology_fusion_det"].mean(),

@@ -9,32 +9,22 @@ from sklearn.linear_model import Ridge
 from sklearn.metrics import r2_score
 
 # ============================================================
-# PHASE 2Z -- OUT-OF-FOLD LINEAR-REDUNDANCY DIAGNOSTIC
+# OUT-OF-FOLD LINEAR-REDUNDANCY DIAGNOSTIC
 # ============================================================
 #
-# Written to close a gap found in a post-submission audit (STATUS.md
-# Sec. 6, item 8): the paper's Discussion reports out-of-fold R^2 =
-# 0.960 (5-bus) and 0.959 (IEEE-14) for "each relational column
-# predicted from the non-relational feature vector," but no committed
-# script produced those numbers -- a repo-wide search for Ridge/
-# r2_score found only a comment referencing the check, not an
-# implementation.
+# Reproducibility implementation for the relational-feature redundancy
+# diagnostic reported in the paper.
 #
-# Method (matching the paper's own description): for each explicit
+# Method: for each explicit
 # topology-relational column (neighbor-/incident-edge-comparison
 # features), fit a 5-fold cross-validated Ridge regression predicting
 # that single column from the full non-relational (residual_plus_prior)
 # feature vector, and record the out-of-fold R^2. A high R^2 means a
 # flexible classifier could reconstruct that relational feature from
 # non-relational information alone, without ever being given it
-# explicitly -- the structural explanation this project uses for why
-# topology_fusion so often ties or loses to residual_plus_prior.
-#
-# Two networks, using each one's own feature-set-defining function so
-# this script stays honest to whatever each pipeline actually computes
-# (rather than re-deriving column lists here and risking a second,
-# independent version of the same feature-leakage bug this whole audit
-# was about):
+# explicitly. Feature lists are obtained from each network's own
+# feature-definition function to keep the diagnostic aligned with the
+# evaluated pipeline:
 #   5-bus:    feature_columns() in 23_topology_aware_cyber_physical_localization_HARD.py
 #             (graph-level, one row per scenario)
 #   IEEE-14:  node-level relational columns in
@@ -64,16 +54,8 @@ def load_module(filename, module_name):
 
 
 def out_of_fold_r2(X, y, groups):
-    # FIX (caught in a later audit): this used to be a plain shuffled
-    # KFold, unlike every accuracy result elsewhere in this project, which
-    # is always split at the replication level so a single replication's
-    # matched scenarios (clean/physical/naive/stealth) never straddle
-    # train and test. Switched to GroupKFold(group=replication) for the
-    # same reason: without it, two scenarios from the same replication
-    # (which share a base operating point, and for cyber scenarios the
-    # same target_bus) could land on opposite sides of a fold, letting a
-    # relational column "predict" itself via a near-duplicate row rather
-    # than via genuine non-relational information.
+    # Group folds by replication so matched scenarios from the same
+    # operating point never appear on opposite sides of an OOF split.
     gkf = GroupKFold(n_splits=N_FOLDS)
     oof_pred = np.zeros(len(y))
     for train_idx, test_idx in gkf.split(X, y, groups):

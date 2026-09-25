@@ -5,28 +5,17 @@ import sys
 import pandas as pd
 
 # ============================================================
-# PHASE 2U -- MULTI-SEED REPLICATION OF THE HARD RESULT
+# 5-BUS MULTI-SEED REPLICATION
 # ============================================================
-#
-# STATUS.md's headline numbers (topology_fusion beats prior_only at
-# both detection and localization under realistic attack magnitude)
-# come from ONE seed's data draw, with only a within-run bootstrap CI.
-# That is not the same as cross-seed replication: a reviewer's first
-# question would be "does this hold up with a different random draw
-# of the same scenario generator, not just resampling of one draw?"
-#
-# This script re-runs data generation (22_..._HARD.py) + evaluation
-# (23_..._HARD.py) for several independent seeds, sequentially
-# (each seed overwrites the same phase2r_hard_graph_*/phase2s_hard_*
-# files -- intentional, we only need to KEEP the extracted summary
-# numbers per seed, not every raw dataset), and reports mean/std/range
-# of the headline metrics across seeds.
+# Re-run data generation and evaluation for 16 independent seeds.
+# Intermediate single-seed files are overwritten intentionally; the
+# per-seed summary is preserved in results/phase2u_multiseed_*.csv.
 # ============================================================
 
 ROOT = Path(__file__).resolve().parent
 RESULTS = ROOT / "results"
 
-SEEDS = [20260812, 42, 777, 2024, 3, 11, 19, 37, 53, 71, 97, 131, 163, 197, 229, 251]  # first is the seed already used throughout; 12 more appended for a 16-seed CI-tightening pass
+SEEDS = [20260812, 42, 777, 2024, 3, 11, 19, 37, 53, 71, 97, 131, 163, 197, 229, 251]
 N_REP = 500
 
 
@@ -46,10 +35,7 @@ def extract_headline(seed):
     topo_det = det[det["feature_set"] == "topology_fusion"]["balanced_accuracy"].max()
     rpp_det = det[det["feature_set"] == "residual_plus_prior"]["balanced_accuracy"].max()
     prior_det = det[det["feature_set"] == "prior_only"]["balanced_accuracy"].max()
-    # FIX (caught in a later audit, STATUS.md Sec. 6): residual_only was
-    # never tracked here, so Table III/Fig. 4's 5-bus "res." column had
-    # to fall back to a single-primary-seed value instead of a genuine
-    # 4-seed mean like every other cell. Added for parity with 30/32_*.py.
+    # Track every feature set used in the cross-network comparison.
     res_det = det[det["feature_set"] == "residual_only"]["balanced_accuracy"].max()
     topo_loc = loc[loc["feature_set"] == "topology_fusion"]["top1_accuracy"].max()
     rpp_loc = loc[loc["feature_set"] == "residual_plus_prior"]["top1_accuracy"].max()
@@ -62,10 +48,8 @@ def extract_headline(seed):
         "residual_plus_prior_best_detection_balacc": rpp_det,
         "prior_only_best_detection_balacc": prior_det,
         "residual_only_best_detection_balacc": res_det,
-        # positive = topology_fusion ahead of the no-topology
-        # residual+prior ablation; this is the gap that actually
-        # isolates topology's own contribution (the old "detection_gap"
-        # below, vs. prior_only alone, does not -- see STATUS.md).
+        # Positive values indicate topology_fusion ahead of the matched
+        # topology-free residual_plus_prior ablation.
         "topology_vs_residual_plus_prior_detection_gap": topo_det - rpp_det,
         "detection_gap": topo_det - prior_det,
         "topology_fusion_best_localization_top1": topo_loc,
@@ -104,18 +88,8 @@ def main():
     print("\nSaved:\n  results/phase2u_multiseed_replication.csv"
           "\n  results/phase2u_multiseed_summary.csv")
 
-    # FIX (caught in post-submission audit, STATUS.md Sec. 6): the loop
-    # above leaves data/phase2r_hard_*/phase2s_hard_* on disk in whatever
-    # state the LAST seed (SEEDS[-1]) left them, not the primary seed
-    # (SEEDS[0]) this project's other scripts assume when they read those
-    # files directly -- 27_held_out_attack_type_generalization.py and
-    # 33_feature_redundancy_diagnostic.py's 5-bus diagnostic both do this,
-    # and both were silently reading a multi-seed leftover rather than the
-    # documented primary-seed snapshot whenever this script ran first.
-    # Re-running the primary seed here, after the multi-seed summary CSVs
-    # above are already safely saved, restores the canonical snapshot for
-    # every downstream consumer -- a general fix at the source rather than
-    # a special case in each reader.
+    # Restore the primary-seed snapshot expected by downstream scripts
+    # after the multi-seed loop has overwritten the single-run files.
     primary_seed = SEEDS[0]
     print(f"\n=== Restoring primary-seed ({primary_seed}) snapshot for "
           f"downstream scripts (27, 33) ===")

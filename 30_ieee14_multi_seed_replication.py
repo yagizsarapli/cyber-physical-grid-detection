@@ -5,7 +5,11 @@ import sys
 import pandas as pd
 
 # ============================================================
-# PHASE 2W -- MULTI-SEED REPLICATION OF THE IEEE-14 SCALE STUDY
+# IEEE-14 MULTI-SEED REPLICATION
+# ============================================================
+# Re-run the scale study for 16 independent seeds. Intermediate
+# single-seed files are overwritten intentionally; per-seed summaries
+# are preserved in results/phase2w_* files.
 # ============================================================
 #
 # The IEEE-14 result (28_ieee14_scale_replication.py) has only ever
@@ -28,7 +32,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent
 RESULTS = ROOT / "results"
 
-SEEDS = [20260921, 42, 777, 2024, 3, 11, 19, 37, 53, 71, 97, 131, 163, 197, 229, 251]  # first is the seed already used throughout; 12 more appended for a 16-seed CI-tightening pass, matching 26/32's additions
+SEEDS = [20260921, 42, 777, 2024, 3, 11, 19, 37, 53, 71, 97, 131, 163, 197, 229, 251]
 N_REP = 500
 
 
@@ -63,12 +67,14 @@ def extract_headline(seed):
         "prior_only_det": prior_det,
         "best_nonrelational_det": max(rpp_det, res_det, prior_det),
         "topo_vs_best_nonrelational_det_gap": topo_det - max(rpp_det, res_det, prior_det),
+        "topo_vs_residual_plus_prior_det_gap": topo_det - rpp_det,
         "topology_fusion_loc": topo_loc,
         "residual_plus_prior_loc": rpp_loc,
         "residual_only_loc": res_loc,
         "prior_only_loc": prior_loc,
         "best_nonrelational_loc": max(rpp_loc, res_loc, prior_loc),
         "topo_vs_best_nonrelational_loc_gap": topo_loc - max(rpp_loc, res_loc, prior_loc),
+        "topo_vs_residual_plus_prior_loc_gap": topo_loc - rpp_loc,
     }
 
 
@@ -80,9 +86,9 @@ def main():
              "--n-rep", str(N_REP), "--seed", str(seed)])
         row = extract_headline(seed)
         rows.append(row)
-        print(f"  topology vs best non-relational: "
-              f"detection gap={row['topo_vs_best_nonrelational_det_gap']:+.4f} | "
-              f"localization gap={row['topo_vs_best_nonrelational_loc_gap']:+.4f}")
+        print(f"  topology vs residual+prior: "
+              f"detection gap={row['topo_vs_residual_plus_prior_det_gap']:+.4f} | "
+              f"localization gap={row['topo_vs_residual_plus_prior_loc_gap']:+.4f}")
 
     df = pd.DataFrame(rows)
     print("\n=== ALL SEEDS ===")

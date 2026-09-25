@@ -370,13 +370,8 @@ def feature_columns(graph_df):
     ]
 
     # Explicit topology-relational columns (neighbor/incident-edge
-    # comparisons) are named e.g. "b0_neighbor_mean_residual" or
-    # "b0_incident_edge_max_innovation" -- they contain the substrings
-    # "residual"/"innovation" like the plain per-bus features do, so
-    # they must be excluded here by name, or they silently leak into
-    # residual_only/prior_only and those stop being topology-free
-    # baselines. (Caught empirically: before this exclusion, all 65
-    # relational columns in topology_fusion were double-counted this
+    # Relational columns also contain "residual"/"innovation" in their
+    # names, so they are explicitly excluded from topology-free baselines.
     # way -- 30 into residual_only, 35 into prior_only -- so that
     # residual_only | prior_only == topology_fusion exactly, i.e.
     # topology_fusion added no information beyond the two "baselines"
@@ -746,13 +741,10 @@ def build_node_learning_table(node):
 
 
 def node_feature_sets(node):
-    # FIX (caught in post-submission audit): "degree" and the four
-    # "role_*" one-hot flags used to be prepended to every feature set
-    # below, including residual_only/prior_only/residual_plus_prior.
-    # "degree" is graph-topology information -- it does not belong in
-    # anything called non-relational/topology-free. "role_load" is
-    # worse: the attack generator only ever targets load buses
-    # (target_bus = rng.choice(load_buses) in the scenario generator),
+    # Static degree and device-role metadata are excluded from all
+    # feature sets. They are not scenario-specific relational features,
+    # and device role can encode attack-target eligibility because the
+    # generator targets load buses only.
     # so handing the localizer role_load is close to handing it the
     # answer's eligible-candidate set directly, regardless of which
     # feature set is nominally being tested. Dropped from all four

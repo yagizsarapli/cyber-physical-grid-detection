@@ -13,31 +13,13 @@ from sklearn.metrics import balanced_accuracy_score, recall_score
 warnings.filterwarnings("ignore")
 
 # ============================================================
-# PHASE 2U-B -- HELD-OUT ATTACK-TYPE GENERALIZATION
+# HELD-OUT ATTACK-TYPE GENERALIZATION
 # ============================================================
-#
-# STATUS.md's "next steps" originally said "re-run Phase 14 (zero-day)
-# against the HARD/HARDER data." That turned out to be wrong to
-# promise: Phase 14/17 read from a completely different upstream data
-# lineage (phase2g_v2_scenario_metadata.csv / phase2i_streaming_*),
-# built for a richer taxonomy of event types, and are not compatible
-# with the Phase 2Q/2R/2S graph-feature files without a substantial
-# bridging effort. Rather than force that fit, this script asks the
-# same *kind* of question -- does the detector generalize to an
-# attack TYPE it never trained on, not just a new sample of a type it
-# already knows -- directly on the data already validated here.
-#
-# This project only has two cyber case types (naive_single_sensor_
-# corruption, nonlinear_model_consistent_fdia/stealth), so this is a
-# small, 2-condition test, not a claim of the same scope as Phase 14's
-# 5-cyber-type taxonomy. Framed honestly as that.
-#
-# Method: for each cyber type, train topology_fusion/HistGradientBoosting
-# with that type COMPLETELY REMOVED from train+validation (clean +
-# physical + the OTHER cyber type only), then test recall specifically
-# on the held-out type's test-split rows. Compare against the same
-# model's recall when it WAS allowed to train on that type (the
-# standard Phase 2S-hard result) as a reference ceiling.
+# Evaluate attack-family generalization using the two cyber case types
+# in the final dataset. For each family, train with that family removed
+# from the training split and measure recall on held-out test rows.
+# Both topology_fusion and residual_plus_prior are evaluated under the
+# same protocol.
 # ============================================================
 
 ROOT = Path(__file__).resolve().parent
@@ -61,15 +43,8 @@ phase23 = load_module(
 CYBER_TYPES = ["naive_single_sensor_corruption", "nonlinear_model_consistent_fdia"]
 
 
-# Originally topology_fusion only ("this test uses topology_fusion
-# specifically, unaffected by Sec. IV's correction -- whether
-# residual_plus_prior shows the same collapse was not independently
-# re-tested"). Added residual_plus_prior here to close that flagged
-# gap: Sec. IV shows the two feature sets are behaviorally
-# near-identical in-distribution, so the mechanistic expectation is
-# that the zero-day collapse -- which is about attack TYPES never
-# seen at all, not about which non-relational features are used --
-# should not depend on whether topology-relational columns are present.
+# Evaluate both the topology-aware representation and the matched
+# topology-free residual_plus_prior ablation.
 FEATURE_SETS_TO_TEST = ["topology_fusion", "residual_plus_prior"]
 
 
@@ -126,16 +101,8 @@ def main():
                 (df["dataset_split"] == "train")
                 & (df["case"] != held_out)
             )
-            # FIX (caught in post-submission audit, STATUS.md Sec. 6
-            # item 9): this used to be dataset_split != "train"
-            # (validation+test combined), while the seen-in-training
-            # reference below evaluates on dataset_split == "test"
-            # only -- an apples-to-oranges comparison (different
-            # evaluation-set composition, not just different training
-            # data). Both conditions now evaluate on the same "test"
-            # split; validation+test rows of the held-out type were
-            # fair, unseen material either way, but comparing the two
-            # recall numbers requires the denominator to match too.
+            # Both held-out and seen-in-training conditions are evaluated
+            # on the same test split for a matched recall comparison.
             test_mask = (df["case"] == held_out) & (df["dataset_split"] == "test")
 
             r = fit_eval(df, feat_cols, train_mask, test_mask,

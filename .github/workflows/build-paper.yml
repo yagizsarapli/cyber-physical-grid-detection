@@ -156,6 +156,30 @@ jobs:
           plt.close(fig)
           PY
 
+      - name: Static-check live experiment scripts
+        run: |
+          python3 -m py_compile \
+            21_nonlinear_stealth_fdia_bdd_benchmark_HARD.py \
+            22_graph_ready_protected_prior_telemetry_HARD.py \
+            22_graph_ready_protected_prior_telemetry_HARDER.py \
+            23_topology_aware_cyber_physical_localization_HARD.py \
+            23_topology_aware_cyber_physical_localization_HARDER.py \
+            24_realtime_latency_benchmark.py \
+            24_realtime_latency_benchmark_WARMSTART.py \
+            24_realtime_latency_benchmark_OPTIMIZED.py \
+            24_realtime_latency_benchmark_FINAL.py \
+            25_wls_overhead_diagnostic.py \
+            26_multi_seed_replication.py \
+            27_held_out_attack_type_generalization.py \
+            28_ieee14_scale_replication.py \
+            29_paper_figures.py \
+            30_ieee14_multi_seed_replication.py \
+            31_ieee30_scale_replication.py \
+            32_ieee30_multi_seed_replication.py \
+            33_feature_redundancy_diagnostic.py \
+            exploration/01_microgrid_topology.py \
+            exploration/08_multirate_operating_dataset.py
+
       - name: Compile canonical manuscript
         run: |
           cd paper

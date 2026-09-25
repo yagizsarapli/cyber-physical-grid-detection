@@ -19,17 +19,15 @@ from sklearn.linear_model import LogisticRegression
 warnings.filterwarnings("ignore")
 
 # ============================================================
-# PHASE 2T -- FINAL (all validated fixes combined, larger N)
+# FINAL END-TO-END LATENCY BENCHMARK
 # ============================================================
-#
-# Combines every fix validated separately in this phase's earlier
-# scripts, run once at N=300 (vs 60-100 before) for stable p95/max
-# tail-latency estimates:
+# N=300 benchmark using the optimized measurement update, a lightweight
+# classifier, and the validated state-estimation settings:
 #   - fast measurement update (24_..._OPTIMIZED.py): bulk-write
 #     net.measurement['value'] instead of looping pp.create_measurement()
 #     23x/cycle. Verified bit-identical WLS output.
 #   - LogisticRegression instead of RandomForest for the classifier
-#     (competitive accuracy per Phase 2S-hard, 14x faster inference).
+#     (competitive accuracy in the 5-bus evaluation and faster inference).
 #   - tolerance=1e-4, maximum_iterations=10 instead of 1e-7/40
 #     (25_wls_overhead_diagnostic.py: H1 showed max_iterations isn't
 #     the driver below ~5, H2 showed this tolerance change costs
@@ -123,15 +121,8 @@ def main():
     node_ids = sorted(int(b) for b in net.bus.index)
     load_buses = [int(net.gridra["bus_load_a"]), int(net.gridra["bus_load_b"])]
 
-    # FIX (post-submission audit, Sec. 6 item 4, continued): "innov"
-    # below used to be |va_hat - va_true| -- va_true is the same kind
-    # of oracle-only ground truth as vm_true, not something a deployed
-    # system has. Everywhere else in this project (22/28/31_*.py),
-    # "innovation" compares the WLS estimate to an independently-drawn
-    # PRIOR/forecast, not to ground truth -- built the same way here:
-    # a separate prior_net solved from the same context with a small,
-    # independent load-forecast error (2.5%, matching the 5-bus
-    # convention in 22_graph_ready_protected_prior_telemetry_HARD.py).
+    # Innovation uses the WLS estimate relative to an independently
+    # perturbed prior/forecast, matching the deployable 5-bus convention.
     prior_net = topology.build_microgrid()
     prior_context = slow.iloc[0].copy()
     prior_context["load_a_p_mw"] = float(prior_context["load_a_p_mw"]) * (
@@ -146,11 +137,8 @@ def main():
 
     phase21.add_measurement_vector(net, np.ones(len(stds)), stds)
 
-    # FIX (caught in post-submission audit, STATUS.md Sec. 6 item 4):
-    # this used to fit LogisticRegression on X_dummy/y_dummy -- pure
-    # random noise and random labels, so clf.predict() below exercised
-    # the right *computational graph* (same feature count, same model
-    # class) but was not a real detector by any definition. Warm-up
+    # Train the timing classifier on real warm-up scenarios from the
+    # same simulation pipeline rather than synthetic placeholder data.
     # trials below generate genuine clean/attack scenarios through this
     # same pipeline and extract real (feature, label) pairs, so the
     # classifier that gets timed has actually learned something.
@@ -190,19 +178,23 @@ def main():
         warmup_rows.append([wu_feats[k] for k in sorted(wu_feats)])
         warmup_labels.append(int(is_attack))
 
-    n_feat = len(timed_feature_step(node_ids, adjacency, np.zeros(5), np.zeros(5)))
-    X_train = np.array(warmup_rows) if warmup_rows else rng.normal(size=(200, n_feat))
-    y_train = np.array(warmup_labels) if warmup_rows else rng.integers(0, 2, size=200)
+    if not warmup_rows:
+        raise RuntimeError("No valid warm-up scenarios were generated.")
+    X_train = np.asarray(warmup_rows, dtype=float)
+    y_train = np.asarray(warmup_labels, dtype=int)
     clf = Pipeline([
         ("impute", SimpleImputer()),
         ("scale", StandardScaler()),
         ("model", LogisticRegression(max_iter=1000)),
     ])
     clf.fit(X_train, y_train)
+    train_pred = clf.predict(X_train)
+    tp = np.mean(train_pred[y_train == 1] == 1)
+    tn = np.mean(train_pred[y_train == 0] == 0)
+    train_bal_acc = 0.5 * (tp + tn)
     print(f"Warm-up: {len(warmup_labels)} real scenarios "
           f"({sum(warmup_labels)} attack, {len(warmup_labels) - sum(warmup_labels)} clean), "
-          f"train balanced accuracy = "
-          f"{float(np.mean(clf.predict(X_train) == y_train)):.3f}")
+          f"train balanced accuracy = {train_bal_acc:.3f}")
 
     wls_ms, poststate_ms, feat_ms, assembly_ms, pred_ms, total_ms = [], [], [], [], [], []
     n_fail = 0

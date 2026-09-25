@@ -34,7 +34,7 @@ yagiz.sarapli@tu-dortmund.de}
 \maketitle
 
 \begin{abstract}
-Distinguishing cyber false-data-injection attacks (FDIAs) from legitimate physical disturbances requires accurate detection, localization, and sufficiently fast end-to-end processing. We evaluate the marginal value of explicit topology-relational features across a synthetic 5-bus microgrid and standard IEEE 14-bus and 30-bus systems using deployable WLS residuals, validation-only model selection, and a matched topology-free residual-plus-prior ablation. Across 16 independent seeds, topology features are neutral on the 5-bus system (detection gap $-0.000\pm0.009$; localization $+0.003\pm0.017$) but produce small positive gaps at both IEEE systems (IEEE 14-bus: $+0.009\pm0.012$ detection, $+0.018\pm0.017$ localization; IEEE 30-bus: $+0.028\pm0.019$ detection, $+0.013\pm0.016$ localization). Four unadjusted 95\% confidence intervals exclude zero; three effects (IEEE-14 localization, IEEE-30 detection, IEEE-30 localization) remain significant under a Bonferroni correction, while IEEE-14 detection does not. Separately, pipeline profiling reduces median end-to-end latency from 42.98\,ms to 16.2--17.0\,ms, with p99 at 17.0--19.2\,ms but rare maxima of 89.1--92.7\,ms. Finally, neither feature set generalizes to a completely unseen attack type (0--1.3\% recall versus 91--100\% when represented in training). The results show that topology benefits vary across the tested systems, upstream software costs dominate real-time latency, and unseen attack mechanisms remain a major limitation.
+Distinguishing cyber false-data-injection attacks (FDIAs) from legitimate physical disturbances requires accurate detection, localization, and sufficiently fast end-to-end processing. We evaluate the marginal value of explicit topology-relational features across a synthetic 5-bus microgrid and standard IEEE 14-bus and 30-bus systems using deployable WLS residuals, validation-only model selection, and a matched topology-free residual-plus-prior ablation. Across 16 independent seeds, topology features are neutral on the 5-bus system on both tasks but produce small positive gaps (roughly 0.01--0.03 balanced-accuracy/top-1-accuracy points) on both detection and localization at both IEEE systems; three of the four IEEE gaps remain significant under a Bonferroni correction, one does not. Separately, pipeline profiling reduces median end-to-end latency from 42.98\,ms to 16.2--17.0\,ms, with p99 at 17.0--19.2\,ms but rare maxima of 89.1--92.7\,ms. Finally, neither feature set generalizes to a completely unseen attack type (0--1.3\% recall versus 91--100\% when represented in training). The results show that topology benefits vary across the tested systems, upstream software costs dominate real-time latency, and unseen attack mechanisms remain a major limitation.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -53,7 +53,7 @@ We evaluate detection and localization across three networks and separately prof
 
 \subsection{Contributions}
 \begin{itemize}
-\item A 16-seed cross-network ablation showing small positive detection and localization gaps for explicit topology-relational features at both standard IEEE test systems (14-bus, 30-bus), but no corresponding benefit on either task at the small custom 5-bus microgrid (Sections~\ref{sec:results1} and \ref{sec:scale}), together with a quantitative redundancy analysis of the 5-bus result.
+\item A 16-seed cross-network ablation showing small positive detection and localization gaps for explicit topology-relational features at both standard IEEE test systems (14-bus, 30-bus), but no measurable benefit on either task at the small custom 5-bus microgrid (Sections~\ref{sec:results1} and \ref{sec:scale}), together with a quantitative redundancy analysis of the 5-bus result.
 \item A root-cause profiling methodology for the ``fast model, slow pipeline'' gap identified in prior work, and a demonstrated fix that closes most of it without hardware acceleration (Section~\ref{sec:latency}).
 \item A zero-day stress test showing that recall collapses when an entire attack family is withheld from training (Section~\ref{sec:zeroday}).
 \end{itemize}
@@ -77,7 +77,7 @@ Localization work spans capsule networks for load-altering (not FDIA) attacks ev
 \cite{abukhousa2026latency} provides the closest latency comparison: on a larger industrial electromagnetic-transient (EMT) testbed, classifier inference is fast while end-to-end latency remains substantially higher. Section~\ref{sec:latency} examines the same pipeline-level question and isolates a software-level bottleneck in the present implementation.
 
 \subsection{Zero-Day / Unseen-Attack Generalization}
-The general (non-power-specific) intrusion-detection literature widely reports that supervised detectors trained on known attack families do not reliably generalize to unseen ones; a verified, quantitative comparison specific to the power-systems FDIA literature remains an open point for future work.
+Generalization to attack families absent from training remains an important deployment question. Section~\ref{sec:zeroday} evaluates this directly for the two FDIA families used here.
 
 \subsection{Broader Gaps Identified in Reviews}
 A 2025 scoping review of machine-learning applications in power-system protection \cite{oelhaf2025scoping} identifies two relevant gaps: limited reporting of computational latency and little cross-topology evaluation. Sections~\ref{sec:latency} and \ref{sec:scale} address these issues within the scope of the present test systems.
@@ -151,7 +151,7 @@ Figure~\ref{fig:multiseed} summarizes the 16-seed result. With localization trai
 \subsection{Redundancy Diagnostic}
 The near-zero 5-bus gaps are consistent with high linear recoverability of the relational features from the local feature set. Predicting each of the 65 relational columns from \texttt{residual\_plus\_prior} alone, with 5-fold cross-validated ridge regression, gives a mean out-of-fold $R^2$ of 0.956 (median 1.000, minimum 0.613, 90.8\% of columns above 0.8): a neighbor-mean or incident-edge aggregate over a fixed, small neighbor set is, on a network this size, close to an affine function of the same per-bus values \texttt{residual\_plus\_prior} already provides in full. A sufficiently flexible classifier (HistGradientBoosting, the best model throughout) may therefore reconstruct much of the relational information internally, consistent with the near-zero 5-bus gaps. This explanation is specific to the fixed 5-bus topology and does not predict the larger-network results in Section~\ref{sec:scale}, where a separate size-agnostic feature design is used. The Discussion evaluates whether reduced redundancy can explain the observed cross-network pattern.
 
-\section{Results II: Real-Time Feasibility -- Diagnosing and Fixing the Gap}
+\section{Results II: Real-Time Feasibility and Pipeline Profiling}
 \label{sec:latency}
 
 Following \cite{abukhousa2026latency}, we measure the full per-cycle decision pipeline (state estimation $\rightarrow$ feature computation $\rightarrow$ classification) against a one-cycle reference of 20\,ms at the network's confirmed 50\,Hz. The 20\,ms value is used as a per-cycle computational reference rather than a universal protection requirement. One-time network and model setup is excluded.
@@ -244,7 +244,7 @@ Loc., IEEE-30 & 0.901 & 0.888 & 0.510 & 0.430 \\
 \end{tabular}
 
 \smallskip
-\footnotesize Per-seed gap direction and uncertainty are reported separately in Section~\ref{sec:results1} and Table~\ref{tab:gapstats}; no cell is emphasized as a confirmed winner.
+\footnotesize Per-seed gap statistics and uncertainty are reported in Table~\ref{tab:gapstats}.
 \end{table}
 
 \begin{figure}[t]

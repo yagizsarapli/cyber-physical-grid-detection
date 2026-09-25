@@ -19,37 +19,12 @@ from sklearn.metrics import balanced_accuracy_score, recall_score, f1_score, roc
 warnings.filterwarnings("ignore")
 
 # ============================================================
-# PHASE 2X -- A THIRD NETWORK SCALE (IEEE 30-BUS), REQUESTED
-# SPECIFICALLY TO STRESS-TEST THE REDUNDANCY HYPOTHESIS
+# IEEE 30-BUS SCALE REPLICATION
 # ============================================================
-#
-# Direct copy of 28_ieee14_scale_replication.py (post-fix -- this
-# already includes the residual_plus_prior correction described in
-# STATUS.md Sec. 5's "second, independent instance of the same bug"),
-# with pn.case14() swapped for pn.case30() and output filenames
-# changed so this doesn't overwrite the 14-bus results. Everything
-# else -- WLS/measurement/attack machinery, feature engineering,
-# feature-set definitions, model training, evaluation -- is identical
-# by construction, specifically so this is a clean scale-only
-# comparison, not a comparison confounded by also changing the method.
-#
-# Why this network, why now: two networks (5-bus, IEEE 14-bus) already
-# agree that explicit topology-relational features add no measurable
-# value, and Sec. IV's out-of-fold linear-redundancy check gives a
-# structural reason for the 5-bus case (relational aggregates are
-# near-linearly recoverable from local features on a small, fixed
-# topology). IEEE 30-bus (case30, confirmed net.bus == internal ppc
-# bus count, so h_ac() needs no changes -- checked before writing this
-# script, the same check that ruled out CIGRE MV originally) is bigger,
-# more meshed, and has more lines-per-bus than IEEE 14-bus, making it
-# a genuine test of whether that redundancy story keeps holding as the
-# network gets less sparse, not just a third confirmation of the same
-# 5-bus/14-bus pattern.
-#
-# Every WLS/measurement/attack function below is imported UNMODIFIED
-# from 21_..._HARD.py -- build_measurement_model/h_ac/measurement_schema
-# all operate generically on net.bus.index/net.line.index/model["n_bus"],
-# confirmed by inspection and by this script's own smoke test.
+# Apply the IEEE 14-bus evaluation protocol to the standard IEEE
+# 30-bus system. The WLS/attack machinery, feature-set definitions,
+# model-selection rule, and evaluation metrics are kept aligned across
+# the two standard test systems.
 # ============================================================
 
 ROOT = Path(__file__).resolve().parent
@@ -265,16 +240,9 @@ def feature_sets(df):
     # 5-bus study's feature_columns(). residual_plus_prior is the new,
     # fair, topology-free union.
     #
-    # FIX (caught in a still-later audit): argmax_n_neighbors is raw node
-    # degree -- static graph structure, not a scenario-specific neighbor
-    # COMPARISON like argmax_neighbor_mean/max/local_minus_neighbor. Since
-    # target_bus is always drawn from load_buses only (one_replication(),
-    # never generator/slack buses), degree could let a model learn "which
-    # bus types are typically targets" as a static prior rather than
-    # anything about this scenario's actual residual/innovation pattern --
-    # exactly the reasoning that already removed raw `degree` from every
-    # 5-bus feature set, topology_fusion included (STATUS.md Sec. 6). For
-    # three-network consistency, topology_fusion here excludes it too now.
+    # Raw node degree is excluded because it is static structural metadata,
+    # not a scenario-specific neighbor comparison, and can encode target
+    # eligibility when attacks are restricted to load buses.
     res_all = [c for c in df.columns if c.startswith("res_") or c.startswith("resnode_")]
     innov_all = [c for c in df.columns if c.startswith("innov_") or c.startswith("innovnode_")]
     residual_only = [c for c in res_all if "neighbor" not in c]
@@ -354,13 +322,8 @@ def main():
 
     det_rows = []
     loc_rows = []
-    # FIX (caught in post-submission audit, same bug as 28_ieee14_scale_replication.py):
-    # the validation split was constructed above but never used -- all 3
-    # models were fit on train and scored directly on test, then the best
-    # test score was reported (test-set model selection, optimistic bias).
-    # Now: fit all 3 on train, pick the model with the best VALIDATION
-    # balanced accuracy per feature set, and report only that model's
-    # (unseen) test performance.
+    # Select the classifier per feature set using validation balanced
+    # accuracy, then evaluate that selected model once on the test split.
     for fname, cols in feats.items():
         X_train, y_train = df.loc[train_mask, cols], df.loc[train_mask, "is_cyber"]
         X_val, y_val = df.loc[val_mask, cols], df.loc[val_mask, "is_cyber"]
@@ -394,11 +357,8 @@ def main():
     # Same correction as feature_sets() above: node_res_nb_mean/nb_max/
     # local_minus_nb are relational/structural, not local -- they do not
     # belong in a topology-free baseline. node_n_neighbors (raw degree) is
-    # excluded from topology_fusion entirely, same reasoning as
-    # feature_sets() above and as the 5-bus study's own degree removal:
-    # static structure, not a scenario-specific neighbor comparison, and a
-    # possible target-eligibility leak since attacks only ever target load
-    # buses.
+    # node_n_neighbors is excluded from topology_fusion for the same
+    # target-eligibility reason as in feature_sets().
     node_feat_sets = {
         "residual_only": ["node_res"],
         "prior_only": ["node_innov"],
