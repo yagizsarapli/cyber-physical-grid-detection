@@ -1590,6 +1590,104 @@ rebuild: no bibtex warnings, no undefined citations, still 10 pages,
 same single pre-existing overfull hbox. Fig. 2 regenerated and visually
 confirmed to read the new value.
 
+### Update, 2026-09-25: 20 author commits pulled (CI build, arXiv
+packaging, a second latency rerun), external pre-arXiv feedback
+triaged, one real comparator-labeling fix made
+
+**Twenty commits pulled from `origin/main`, all author-authored, none
+seen before this pull.** Reviewed the full diff rather than trusting
+the commit messages. Contents: a GitHub Actions workflow
+(`.github/workflows/build-paper.yml`) that rebuilds the paper on push;
+a new `make_arxiv_submission.sh` plus a checked-in `arxiv/main.tex`
+mirror (differs from `paper/main.tex` only in figure paths --
+confirmed with `diff`) and a committed `arxiv_preview.pdf`; further
+framing/figure-caption polish and Table I typesetting fixes; and,
+separately, **a second independent $N{=}300$ latency rerun**, now
+reported in the Abstract and Section~V as a range across both runs
+(16.155--17.015\,ms median, 16.429--18.211\,ms p95, 16.952--19.190\,ms
+p99, 89.067--92.657\,ms max) rather than a single run's point values.
+This is a direct, author-made resolution of the exact question flagged
+open in the entry immediately above ("left as the author's call
+whether to add this variability back into the paper"); verified
+directly against `results/phase2t_latency_final.csv` and
+`results/phase2t_latency_environment.json` on disk -- the file's
+current contents match the range's lower bound to 6 significant
+figures, confirming a real second run happened rather than the range
+being invented after the fact. The upper bound matches the single run
+verified in the entry above exactly.
+
+**External feedback triaged.** The author received (and pasted in,
+translated/summarized) a detailed pre-arXiv review covering: framing/
+"story" clarity, raising seed count to 10--20, cutting prose length,
+the development-narrative voice (already fixed, see the editorial-
+voice-cleanup entry above), the Abstract's density, figure polish
+(also already done in the commits just pulled), overuse of em dashes
+as an "AI tone" tell (judged mostly not applicable -- em dashes are
+normal academic style; the real issue was self-referential "we tested
+it rather than leaving it as speculation"-type phrasing, already
+removed), a missing GitHub/code link in the paper, a final reference
+sanity pass, the 90\,ms latency tail (judged not worth chasing further
+for v1 -- correctly noting $N{=}300$ makes p99.9 meaningless and that
+any GC/scheduling explanation would be unmeasured speculation), and
+advisor/endorsement questions. The author's own reply reprioritized
+this into: comparator consistency first, then GitHub public-release
+audit + code link, then Abstract tightening, then (time permitting)
+10--20 seeds -- restated once more concretely as comparator check
+$\to$ Abstract $\to$ repo audit \& code link $\to$ final reference
+check $\to$ arXiv v1.
+
+**Comparator consistency, checked.** The concern: Section~IV (5-bus)
+explicitly compares \texttt{topology\_fusion} against a fixed
+\texttt{residual\_plus\_prior} baseline, but Section~VII's (IEEE-14/30)
+table captions and prose described the comparator as "the best
+non-relational alternative each seed" -- wording that reads as a
+per-seed-selected baseline, a different (and not obviously matched)
+estimand from 5-bus's fixed one. Checked the actual computation in
+`30_ieee14_multi_seed_replication.py` (line 64) and
+`32_ieee30_multi_seed_replication.py`:
+\texttt{best\_nonrelational = max(residual\_plus\_prior, residual\_only,
+prior\_only)}, computed independently per seed. Checked the raw output
+directly (`results/phase2w_ieee14_multiseed_replication.csv`,
+`results/phase2y_ieee30_multiseed_replication.csv`): in all 16 cells
+(2 networks $\times$ 2 tasks $\times$ 4 seeds), the
+\texttt{best\_nonrelational} column is bit-identical to
+\texttt{residual\_plus\_prior} -- confirmed also by hand-subtracting
+Table III's 4-seed-mean columns, which reproduce the headline gap
+figures exactly. So \texttt{residual\_plus\_prior} was, in fact, the
+strongest non-relational baseline in every single case; the reported
+numbers were always correct, this was a labeling-precision issue, not
+a data bug -- no rerun needed, no headline number changed.
+
+**Fix applied.** "the best non-relational alternative each seed" to
+"\texttt{residual\_plus\_prior} (the strongest non-relational baseline
+in every seed)" in both Table IV/V captions, the Cross-Network Result
+paragraph's closing clause, and the Abstract -- in `paper/main.tex`,
+`arxiv/main.tex` (kept in sync by hand, since the build script doesn't
+write to it), and `PAPER\_DRAFT.md`. `README.md` had no occurrence
+(checked). This also makes the comparator's name identical in wording
+across all three networks for the first time. While in `PAPER_DRAFT.md`,
+also found and fixed a second mirroring gap the author's own latency-
+rerun commits had left: the Abstract still had the pre-rerun single-run
+numbers (17.0/18.2/19.2/92.7\,ms) even though Results II's body
+paragraph already had the correct two-run range.
+
+**Verification.** Full `pdflatex` $\to$ `bibtex` $\to$ `pdflatex`
+$\times 2$ rebuild of `paper/main.tex`: clean, no undefined citations,
+still 10 pages. Rendered Table IV/V pages visually inspected -- longer
+captions wrap cleanly within the IEEE column width, no overflow.
+`make_arxiv_submission.sh` re-run end to end to regenerate
+`arxiv_preview.pdf`/`arxiv_submission.zip` from the corrected source;
+completed clean (its own undefined-reference/fatal-error guards both
+passed).
+
+**Not yet done, by design.** Per the author's own priority order, only
+step 1 (comparator check) has been done this round. Abstract tightening,
+the GitHub public-release audit, adding a code-availability line to the
+paper, the final reference sanity pass, and any seed-count increase are
+still open -- the repo-visibility change and the arXiv submission itself
+are also actions that need the author's own direct action, not
+something to do unilaterally.
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,
