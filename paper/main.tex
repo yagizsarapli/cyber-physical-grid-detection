@@ -121,10 +121,9 @@ Table~\ref{tab:ablation} compares \texttt{topology\_fusion} against \texttt{resi
 
 \begin{table}[t]
 \centering
-\small
-\setlength{\tabcolsep}{3.8pt}
 \caption{Topology\_fusion vs.\ the corrected, topology-free ablation (best validation-selected model per cell; 5-bus, $n{=}300$ detection / $n{=}150$ cyber-only localization test scenarios)}
 \label{tab:ablation}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{@{}lcccc@{}}
 \toprule
  & \multicolumn{2}{c}{Detection (bal.\ acc.)} & \multicolumn{2}{c}{Localization (top-1)} \\
@@ -133,7 +132,8 @@ Condition & topo.\ fusion & res.+prior & topo.\ fusion & res.+prior \\
 Hard & 0.950 & 0.937 & 0.967 & 0.967 \\
 Harder (+2$\times$ noise) & 0.950 & 0.947 & 0.960 & 0.967 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 Detection shows a small edge for \texttt{topology\_fusion} at this one seed, in both conditions ($+0.013$ Hard, $+0.003$ Harder); localization is an exact tie under Hard and a small edge for \texttt{residual\_plus\_prior} under Harder ($-0.007$). Neither column is bolded here -- a single seed's small, direction-inconsistent gap is not evidence of a real winner, and the four-seed replication directly below (which includes this same seed) is the test that actually matters. For reference, both feature sets still comfortably beat \texttt{prior\_only} alone (0.860--0.870 detection, 0.687--0.693 localization) and \texttt{residual\_only} alone (0.700 detection, 0.547 localization) -- the gain over either single baseline is large; it is simply not a topology effect.
