@@ -1688,6 +1688,120 @@ still open -- the repo-visibility change and the arXiv submission itself
 are also actions that need the author's own direct action, not
 something to do unilaterally.
 
+### Update, 2026-09-25 (same day, continued): repo audit, Abstract
+tightened, code-availability line added, and a real citation problem
+found and fixed in the Introduction's motivating example
+
+**Repo public-release audit.** Repo is currently private
+(`gh repo view`: `"isPrivate":true`). Checked: no credentials/API
+keys/private-key material in HEAD or anywhere in full git history
+(`git log -p --all` grepped for common secret patterns -- clean); no
+credential-shaped filenames ever committed and removed; no phone
+numbers or non-author personal emails (a regex sweep's only hits were
+DOI strings, false positives); no unprofessional language in the
+tracked `.md` files; all 69 tracked files eyeballed by name -- numbered
+phase scripts, `exploration/`, docs, figures, paper source, CI
+workflow, `requirements.txt` -- nothing out of place; `results/`/
+`data/`/per-phase diagnostic PNGs correctly gitignored, repo is small
+(35 MB `.git`, largest tracked file 532 KB). One gap: **no `LICENSE`
+file** -- flagged as a decision for the author (license choice affects
+reuse rights; not picked unilaterally). Conclusion: repo is safe to
+make public whenever the author confirms; that flip itself is a GitHub
+account-settings change and still needs the author's own explicit
+go-ahead, not implied by "continue with the steps."
+
+**Abstract tightened**: 259 words to 205. Cut the four null/
+sign-unstable per-network gap figures (5-bus det/loc, IEEE-14 det,
+IEEE-30 loc) from the Abstract -- they remain fully reported in
+Section~IV/Table III/the Cross-Network Result paragraph, just not
+repeated in the Abstract -- keeping only the two surviving consistent-
+sign gaps (IEEE-30 detection, IEEE-14 localization) plus one compressed
+non-confirmation caveat instead of a separate sentence. Latency and
+zero-day sentences kept at full numeric precision (not what the
+external feedback's length complaint was about). Mirrored identically
+across `main.tex`, `arxiv/main.tex`, `PAPER_DRAFT.md`.
+
+**Code and Data Availability section added**: a new unnumbered
+`\section*` right after the Conclusion, before the bibliography --
+"Code and reproducibility materials are available at
+https://github.com/yagizsarapli/cyber-physical-grid-detection." --
+in `main.tex`, `arxiv/main.tex`, and `PAPER_DRAFT.md`. The `url`
+package was already loaded, so no preamble change needed. This link
+will 404 for anyone else until the repo audit above is acted on and
+the repo is actually made public -- the text is ready, the visibility
+flip is not done.
+
+**Reference sanity check, and a real problem found.** Fetched primary
+sources directly (`WebFetch`/`WebSearch`, not trusting the bibliography
+entry's own text) for the highest-risk citations: the one non-academic,
+real-world-incident source, plus the two citations whose specific
+numbers are quoted directly in this paper's own prose. Three checked
+out exactly (title/authors match, and for
+\texttt{abukhousa2026latency} and \texttt{ogiesoba2026cyberattack} the
+quoted "sub-15\,ms / 50--90\,ms" and "54--67\,ms per 1000 samples"
+figures were independently confirmed verbatim from each paper's own
+abstract). Two more (\texttt{suri2025powergnn}, \texttt{yaniv2026robust})
+checked out on title/author. The fourth, \texttt{certpolska2026followup}
+(the December-2025 Poland energy-sector cyberattack, cited once, in the
+Introduction's opening motivating example), did not:
+
+- The citation pointed at CERT Polska's \emph{follow-up} report
+  (August 2026), but fetching it directly showed it covers a
+  \emph{different}, later-disclosed issue -- a private-APN
+  misconfiguration affecting a second, smaller CHP plant, 50{,}000
+  residents, a brief heat-supply interruption. It does not contain the
+  firmware/attribution/scale details the paper's sentence actually
+  describes.
+- Those details belong to CERT Polska's \emph{original} January 2026
+  report (a different URL, not previously cited at all). Fetched that
+  directly and confirmed: $>$30 wind/solar farms plus one CHP plant
+  attacked, confirmed (matches); firmware damage and wiper malware
+  confirmed, but "forced into endless restart cycles" specifically is
+  \emph{not} in the primary source -- an unconfirmed embellishment,
+  removed; "Dragonfly" confirmed as one of four vendor names for the
+  same actor (Cisco: Static Tundra, CrowdStrike: Berserk Bear,
+  Microsoft: Ghost Blizzard, Symantec: Dragonfly) -- the paper's
+  attribution language was already accurate and is unchanged.
+- The paper's "500,000 people" blackout figure is the CHP plant's
+  \emph{normal customer base} (what the primary source calls the
+  at-risk population), not an actual outage count -- the same source
+  states explicitly that the attacks "did not affect the ongoing
+  production of electricity" and "did not achieve the attacker's
+  intended effect of disrupting heat supply." The original wording
+  ("was contained before it caused a blackout affecting an estimated
+  500,000 people") was defensible on a careful reading but genuinely
+  easy to misread as a partial blackout that did happen; independently
+  cross-checked against a `WebSearch` sweep (Hacker News, SecurityWeek/
+  AP, SC Media, Wikipedia's incident article) -- all consistent with
+  the primary source, none support a "500,000 affected" reading.
+
+Fixed: new bib key \texttt{certpolska2026incident} pointing at the
+January report's correct URL, replacing \texttt{certpolska2026followup}
+(which was cited nowhere else in the paper, and was removed rather than
+left orphaned); the Introduction sentence rewritten to state only the
+three confirmed facts (facility count and type, firmware/wiper damage,
+customers \emph{served} rather than blacked out, attribution) without
+the unconfirmed restart-cycle mechanism or the ambiguous near-blackout
+framing. Applied to `paper/references.bib`, `arxiv/references.bib`,
+`main.tex`, `arxiv/main.tex`, `PAPER_DRAFT.md`. Not otherwise mentioned
+in `README.md`, `STATUS.md`, or `RELATED_WORK.md` (checked).
+
+**Verification.** Full `pdflatex` $\to$ `bibtex` $\to$ `pdflatex`
+$\times 2$ rebuild after the bibkey rename: no bibtex warnings, no
+undefined citations, citation position unchanged (still resolves as
+[3], since nothing else in the citation order changed), still 10
+pages. Rendered pages 1 and 9 visually checked -- Abstract, Introduction
+paragraph, Code and Data Availability section, and the corrected [3]
+bibliography entry all read as intended.
+
+**Not yet done.** The remaining un-spot-checked 2025/2026 entries
+(\texttt{falas2026learning}, \texttt{li2026physically}, \texttt{lin2026state},
+\texttt{sakr2026explainable}) were not individually re-verified this
+round -- none carry a directly-quoted number or a real-world factual
+claim the way the four checked ones did, so this was judged acceptable
+for a "final sanity pass" rather than a full re-audit. The repo-
+visibility flip and any seed-count expansion remain the author's calls.
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,
