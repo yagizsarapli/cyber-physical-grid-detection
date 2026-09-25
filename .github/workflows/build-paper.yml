@@ -7,6 +7,8 @@ on:
       - 'paper/main.pdf'
       - 'arxiv_preview.pdf'
       - 'figures/paper_fig2_latency_waterfall.png'
+      - 'figures/paper_fig3_zeroday_generalization.png'
+      - 'figures/paper_fig4_scale_comparison.png'
   workflow_dispatch:
 
 permissions:
@@ -24,7 +26,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-science texlive-publishers python3-matplotlib zip
 
-      - name: Regenerate final latency figure from documented latest run
+      - name: Regenerate publication figures from final reported values
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -36,6 +38,7 @@ jobs:
 
           BLUE = "#2a78d6"
           ORANGE = "#eb6834"
+          AQUA = "#1baf7a"
           GOOD = "#0ca30c"
           CRITICAL = "#d03b3b"
           INK = "#0b0b0b"
@@ -68,46 +71,88 @@ jobs:
                   ax.set_axisbelow(True)
               ax.tick_params(length=0)
 
-          def bar_labels(ax, bars, fmt="{:.1f} ms", dy=0.6):
+          def labels(ax, bars, fmt="{:.3f}", dy=0.02):
               for b in bars:
-                  h = b.get_height()
+                  h=b.get_height()
                   ax.annotate(fmt.format(h), (b.get_x()+b.get_width()/2, h+dy),
-                              ha="center", va="bottom", fontsize=9.5, color=INK)
+                              ha="center", va="bottom", fontsize=9, color=INK)
 
-          # Latest documented N=300 run reported in paper/main.tex:
+          # Figure 2: latest documented N=300 run.
           final_median_ms = 16.154562
-
           steps = [
-              ("Original\n(RandomForest, flat init)", 42.98, INK_MUTED),
-              ("+ Warm-start\n(dead end)", 37.14, CRITICAL),
-              ("+ Fast measurement\nupdate (Fix 1)", 22.62, ORANGE),
-              ("+ Light classifier\n(Fix 2)", 19.60, ORANGE),
-              ("+ Final tuned pipeline\n(N=300, real detector)", final_median_ms, GOOD),
+              ("Original pipeline\n(Random Forest)", 42.98, INK_MUTED),
+              ("+ Warm start", 37.14, CRITICAL),
+              ("+ In-place measurement\nupdate", 22.62, ORANGE),
+              ("+ Logistic regression", 19.60, ORANGE),
+              ("Final tuned pipeline\n(N=300)", final_median_ms, GOOD),
           ]
-          labels=[s[0] for s in steps]
-          values=[s[1] for s in steps]
-          colors=[s[2] for s in steps]
-
-          fig, ax = plt.subplots(figsize=(8.5,4.6))
+          fig, ax = plt.subplots(figsize=(8.5,4.4))
           x=np.arange(len(steps))
-          bars=ax.bar(x, values, color=colors, width=0.6, zorder=3)
-          ax.axhline(20.0, color=INK, linewidth=1.4, linestyle=(0,(4,3)), zorder=2)
-          ax.annotate("20 ms budget (1 cycle @ 50 Hz)", xy=(0.6,20.0),
-                      xytext=(0.6,23.2), ha="left", fontsize=9, color=INK)
+          bars=ax.bar(x,[s[1] for s in steps],color=[s[2] for s in steps],width=0.6,zorder=3)
+          ax.axhline(20.0,color=INK,linewidth=1.4,linestyle=(0,(4,3)),zorder=2)
+          ax.annotate("20 ms budget (1 cycle @ 50 Hz)",xy=(0.55,20.0),xytext=(0.55,23.0),
+                      ha="left",fontsize=9,color=INK)
           ax.set_xticks(x)
-          ax.set_xticklabels(labels, fontsize=8.8)
+          ax.set_xticklabels([s[0] for s in steps],fontsize=8.8)
           ax.set_ylabel("Median end-to-end latency (ms)")
-          bar_labels(ax,bars)
+          labels(ax,bars,fmt="{:.1f} ms",dy=0.6)
           style_axes(ax)
           ax.set_ylim(0,50)
-          fig.suptitle("Phase 2T: closing the latency gap by fixing the actual bottleneck",
-                       fontsize=11.5, color=INK)
-          fig.text(0.5,-0.03,
-                   "Warm-start (the first hypothesis) barely helped. The measurement-table\n"
-                   "rebuild fix (Fix 1) did most of the work; a lighter classifier (Fix 2) did the rest.",
-                   ha="center", fontsize=8.5, color=INK_MUTED)
+          fig.suptitle("End-to-end latency after successive pipeline optimizations",
+                       fontsize=11.5,color=INK)
           fig.tight_layout()
-          fig.savefig(FIGURES/"paper_fig2_latency_waterfall.png", dpi=200, bbox_inches="tight")
+          fig.savefig(FIGURES/"paper_fig2_latency_waterfall.png",dpi=200,bbox_inches="tight")
+          plt.close(fig)
+
+          # Figure 3: values reported in Table II.
+          seen=np.array([0.907,1.000])
+          held=np.array([0.000,0.013])
+          fig, ax=plt.subplots(figsize=(7,4.1))
+          x=np.arange(2); w=0.35
+          b1=ax.bar(x-w/2,seen,width=w,color=BLUE,label="Seen in training",zorder=3)
+          b2=ax.bar(x+w/2,held,width=w,color=CRITICAL,label="Attack type withheld",zorder=3)
+          ax.set_xticks(x)
+          ax.set_xticklabels(["Naive single-sensor\ncorruption","Model-consistent\n(stealth) FDIA"],fontsize=10)
+          ax.set_ylabel("Recall on that attack type")
+          ax.set_ylim(0,1.12)
+          labels(ax,b1,dy=0.03); labels(ax,b2,dy=0.03)
+          ax.legend(frameon=False,loc="upper center",bbox_to_anchor=(0.5,1.12),ncol=2,fontsize=9.5)
+          style_axes(ax)
+          fig.tight_layout()
+          fig.savefig(FIGURES/"paper_fig3_zeroday_generalization.png",dpi=200,bbox_inches="tight")
+          plt.close(fig)
+
+          # Figure 4: four-seed means reported in Table III.
+          order=["Topology fusion","Residual+prior","Prior only","Residual only"]
+          colors=[BLUE,AQUA,ORANGE,INK_SECONDARY]
+          det=np.array([
+              [0.945,0.938,0.848,0.682],
+              [0.870,0.873,0.700,0.656],
+              [0.871,0.832,0.672,0.653],
+          ])
+          loc=np.array([
+              [0.958,0.965,0.680,0.548],
+              [0.918,0.895,0.528,0.447],
+              [0.910,0.908,0.515,0.427],
+          ])
+          fig, axes=plt.subplots(1,2,figsize=(11,4.2))
+          for ax,data,title in [
+              (axes[0],det,"Detection (balanced accuracy)"),
+              (axes[1],loc,"Localization (top-1 accuracy)"),
+          ]:
+              x=np.arange(3); w=0.19
+              for i,(name,color) in enumerate(zip(order,colors)):
+                  bars=ax.bar(x+(i-1.5)*w,data[:,i],width=w,color=color,zorder=3,
+                              label=name if ax is axes[0] else None)
+                  labels(ax,bars,fmt="{:.2f}",dy=0.02)
+              ax.set_xticks(x)
+              ax.set_xticklabels(["5-bus","IEEE 14-bus","IEEE 30-bus"],fontsize=9.5)
+              ax.set_ylim(0,1.15)
+              ax.set_title(title,fontsize=11,color=INK,pad=10)
+              style_axes(ax)
+          axes[0].legend(frameon=False,loc="upper center",bbox_to_anchor=(1.15,1.15),ncol=4,fontsize=8.8)
+          fig.tight_layout()
+          fig.savefig(FIGURES/"paper_fig4_scale_comparison.png",dpi=200,bbox_inches="tight")
           plt.close(fig)
           PY
 
@@ -145,7 +190,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add paper/main.pdf arxiv_preview.pdf figures/paper_fig2_latency_waterfall.png
+          git add paper/main.pdf arxiv_preview.pdf figures/paper_fig2_latency_waterfall.png figures/paper_fig3_zeroday_generalization.png figures/paper_fig4_scale_comparison.png
           if git diff --cached --quiet; then
             echo "No generated-file changes to commit."
           else
