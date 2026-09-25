@@ -110,10 +110,8 @@ for ax, metric, title in [
     bar_labels(ax, bars, dy=0.05)
     style_axes(ax)
 
-fig.suptitle("Residual+prior fusion matches topology_fusion; both beat prior_only alone (4 seeds, 5-bus)",
-             fontsize=11, color=INK, y=1.03)
-fig.text(0.5, -0.02, "Bars: mean ± std across 4 seeds. Dots: individual seed results. n=300 detection / n=150 cyber-only localization test scenarios per seed.",
-          ha="center", fontsize=8.5, color=INK_MUTED)
+fig.suptitle("5-bus feature ablation across four independent seeds",
+             fontsize=11, color=INK, y=1.02)
 fig.tight_layout()
 fig.savefig(FIGURES / "paper_fig1_multiseed_advantage.png", dpi=200, bbox_inches="tight")
 plt.close(fig)
@@ -132,11 +130,11 @@ final_row = latency_summary[
 final_median_ms = float(final_row["median_ms"])
 
 steps = [
-    ("Original\n(RandomForest, flat init)", 42.98, INK_MUTED),
-    ("+ Warm-start\n(dead end)", 37.14, CRITICAL),
-    ("+ Fast measurement\nupdate (Fix 1)", 22.62, ORANGE),
-    ("+ Light classifier\n(Fix 2)", 19.60, ORANGE),
-    ("+ Final tuned pipeline\n(N=300, real detector)", final_median_ms, GOOD),
+    ("Original pipeline\n(Random Forest)", 42.98, INK_MUTED),
+    ("+ Warm start", 37.14, CRITICAL),
+    ("+ In-place measurement\nupdate", 22.62, ORANGE),
+    ("+ Logistic regression", 19.60, ORANGE),
+    ("Final tuned pipeline\n(N=300)", final_median_ms, GOOD),
 ]
 labels = [s[0] for s in steps]
 values = [s[1] for s in steps]
@@ -154,12 +152,8 @@ ax.set_ylabel("Median end-to-end latency (ms)")
 bar_labels(ax, bars, fmt="{:.1f} ms", dy=0.6)
 style_axes(ax)
 ax.set_ylim(0, 50)
-fig.suptitle("Phase 2T: closing the latency gap by fixing the actual bottleneck",
+fig.suptitle("End-to-end latency after successive pipeline optimizations",
              fontsize=11.5, color=INK)
-fig.text(0.5, -0.03,
-          "Warm-start (the first hypothesis) barely helped. The measurement-table\n"
-          "rebuild fix (Fix 1) did most of the work; a lighter classifier (Fix 2) did the rest.",
-          ha="center", fontsize=8.5, color=INK_MUTED)
 fig.tight_layout()
 fig.savefig(FIGURES / "paper_fig2_latency_waterfall.png", dpi=200, bbox_inches="tight")
 plt.close(fig)
@@ -192,10 +186,8 @@ ax.set_ylabel("Recall on that attack type")
 ax.set_ylim(0, 1.12)
 bar_labels(ax, bars1, dy=0.03)
 bar_labels(ax, bars2, dy=0.03)
-ax.legend(frameon=False, loc="upper center", bbox_to_anchor=(0.5, 1.16), ncol=2, fontsize=9.5)
+ax.legend(frameon=False, loc="upper center", bbox_to_anchor=(0.5, 1.12), ncol=2, fontsize=9.5)
 style_axes(ax)
-fig.suptitle("No zero-day generalization: recall collapses when an attack type is withheld",
-             fontsize=11, color=INK, y=1.06)
 fig.tight_layout()
 fig.savefig(FIGURES / "paper_fig3_zeroday_generalization.png", dpi=200, bbox_inches="tight")
 plt.close(fig)
@@ -291,9 +283,7 @@ for ax, d5, d14, d30, title in [
     ax.set_title(title, fontsize=11, color=INK, pad=10)
     style_axes(ax)
 
-axes[0].legend(frameon=False, loc="upper center", bbox_to_anchor=(1.15, 1.22), ncol=4, fontsize=8.8)
-fig.suptitle("Detection: null at 5-bus/IEEE-14, positive in all 4 tested seeds at IEEE-30. Localization: null at 5-bus/IEEE-30, never negative across the same 4 seeds at IEEE-14 -- neither yet a statistically confirmed effect at this seed count",
-             fontsize=9.0, color=INK, y=1.04)
+axes[0].legend(frameon=False, loc="upper center", bbox_to_anchor=(1.15, 1.16), ncol=4, fontsize=8.8)
 fig.tight_layout()
 fig.savefig(FIGURES / "paper_fig4_scale_comparison.png", dpi=200, bbox_inches="tight")
 plt.close(fig)
