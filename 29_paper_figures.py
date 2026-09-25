@@ -110,7 +110,7 @@ for ax, metric, title in [
     bar_labels(ax, bars, dy=0.05)
     style_axes(ax)
 
-fig.suptitle("5-bus feature ablation across four independent seeds",
+fig.suptitle("5-bus feature ablation across 16 independent seeds",
              fontsize=11, color=INK, y=1.02)
 fig.tight_layout()
 fig.savefig(FIGURES / "paper_fig1_multiseed_advantage.png", dpi=200, bbox_inches="tight")
@@ -278,7 +278,7 @@ for ax, d5, d14, d30, title in [
                        label=feat if ax is axes[0] else None)
         bar_labels(ax, bars, dy=0.02, fmt="{:.2f}")
     ax.set_xticks(x)
-    ax.set_xticklabels(["5-bus\n(4-seed mean)", "IEEE 14-bus\n(4-seed mean)", "IEEE 30-bus\n(4-seed mean)"])
+    ax.set_xticklabels(["5-bus\n(16-seed mean)", "IEEE 14-bus\n(16-seed mean)", "IEEE 30-bus\n(16-seed mean)"])
     ax.set_ylim(0, 1.15)
     ax.set_title(title, fontsize=11, color=INK, pad=10)
     style_axes(ax)

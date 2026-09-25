@@ -26,7 +26,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent
 RESULTS = ROOT / "results"
 
-SEEDS = [20260812, 42, 777, 2024]  # first is the seed already used throughout
+SEEDS = [20260812, 42, 777, 2024, 3, 11, 19, 37, 53, 71, 97, 131, 163, 197, 229, 251]  # first is the seed already used throughout; 12 more appended for a 16-seed CI-tightening pass
 N_REP = 500
 
 

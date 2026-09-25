@@ -6,11 +6,13 @@ neighbors -- actually help it (a) tell a cyberattack apart from a
 normal physical disturbance, (b) find where the attack is, and (c) do
 both fast enough for a protective relay to act on?
 
-Short answer: **it depends which task and which network** -- and only
-after two full rounds of auditing our own pipeline and catching our
-own mistakes, twice, did that become the honest answer rather than a
-cleaner-sounding wrong one. See below for what that means and where to
-find the details.
+Short answer: **it depends which network, not which task** -- yes at
+both standard IEEE test systems (14-bus, 30-bus), on both detection
+and localization; no at a small custom 5-bus microgrid, on either
+task. That answer took two full rounds of auditing our own pipeline
+and catching our own mistakes, then a 4x seed-count replication to
+confirm the pattern was real and not four-seed noise. See below for
+what that means and where to find the details.
 
 ![5-bus vs. IEEE 14-bus vs. IEEE 30-bus: detection and localization by feature set](figures/paper_fig4_scale_comparison.png)
 
@@ -47,7 +49,11 @@ cyber-only, only the training-set composition changed. With **all
 three** fixed, the fair comparison is a near-exact tie on **both
 tasks**: detection 0.945 vs. 0.938 (4-seed mean, gap +0.008±0.012, sign
 unstable) and localization 0.958 vs. 0.965 (gap -0.007±0.016, sign
-unstable, including one exact tie across the 4 seeds). An earlier, once-corrected pass had reported
+unstable, including one exact tie across the 4 seeds) -- since
+quadrupled to a 16-seed mean (see the Update further below): detection
+0.936 vs. 0.936 (gap -0.000±0.009) and localization 0.964 vs. 0.961
+(gap +0.003±0.017), the null result if anything tighter, not
+overturned, at 4x the seeds. An earlier, once-corrected pass had reported
 localization as a topology-free *win* (0.980 vs. 0.993, before the
 degree/role leak was found); that asymmetry is gone once the
 comparison is fair on both sides. **Combining residual and prior
@@ -89,38 +95,50 @@ version:
   -- though with roughly double the uncertainty an earlier,
   less-audited pass reported.
 
-**A caveat on both of those, stated plainly**: 4 same-signed seeds is
-consistent-sign evidence, not a statistically confirmed effect. A
-standard t-based 95% CI crosses zero for both gaps (IEEE-30 detection:
-+0.039±0.047, i.e. [-0.008, 0.086]; IEEE-14 localization: +0.023±0.033,
-i.e. [-0.010, 0.056]). A distribution-free sign test doesn't reach
-p<0.05 for either, but not by the same margin: one-sided p=0.5⁴=0.0625
-for IEEE-30 (four of four seeds positive), and p=0.5³=0.125 for IEEE-14
-once its one exact tie is excluded per sign-test convention (three of
-three non-zero seeds positive, not four of four -- a standard sign test
-drops ties rather than counting them as a positive). Both findings are
-described throughout as *consistent in sign across all four tested
-seeds*, not as confirmed nonzero effects. Note the sign test's own bar
-is low if the pattern holds -- a fifth same-direction seed at IEEE-30
-would already cross one-sided p<0.05 (0.5⁵=0.03125) -- so resolving the
-gap's actual *magnitude* with a tight, stable confidence interval is the
-harder goal, needing roughly 10-20 seeds or a paired/bootstrap
-difference test, neither run here.
+**Update, 2026-09-25**: both gaps above were flagged as consistent-sign
+but not statistically confirmed at 4 seeds (see the original caveat
+this replaced, below) -- so they were quadrupled to 16 seeds,
+identically across all three networks and both tasks, to resolve it
+properly. The picture changed again, in a cleaner direction: IEEE-14
+detection, previously null at 4 seeds (-0.003±0.013), now also shows a
+small positive gap (+0.009±0.012); IEEE-30 localization, previously
+null (+0.002±0.023), now also shows one (+0.013±0.016). The original
+two findings held up and tightened: IEEE-30 detection (+0.028±0.019)
+and IEEE-14 localization (+0.018±0.017). 5-bus remained null on both
+tasks throughout (-0.000±0.009 detection, +0.003±0.017 localization).
+The pattern is therefore network-specific, not task-specific: both
+standard IEEE systems now show a small, mostly confirmed advantage on
+both tasks; the custom 5-bus microgrid shows none on either.
 
-Put plainly: each of the two standard IEEE systems shows a
-sign-consistent topology gap in exactly one task, and it's a
-*different* task at each network; the small custom 5-bus microgrid
-shows no such gap in either task, under either round of correction.
-Three separately-written pipelines needing the same category of
-feature-leakage fix, and then a second, more serious category of
-mistake (oracle information reaching a feature meant to be deployable)
-surviving a first full audit only to be caught in a second, more
-adversarial one, is itself the finding we'd want a reader to take away
-alongside the numbers: neither kind of bug was visible from results
-alone -- both were found only by reading feature-computation code line
-by line against "could a real, deployed detector actually compute
-this." Full per-seed numbers, and the complete before/after account of
-both audit rounds, are in `STATUS.md` §6.
+**The current statistics, stated plainly**: at 16 seeds, four of the
+six network/task gaps have a t-based 95% CI excluding zero (two-sided
+t-test p<0.05): IEEE-14 detection (p=0.011), IEEE-14 localization
+(p<0.001), IEEE-30 detection (p<0.001), IEEE-30 localization (p=0.007).
+A distribution-free sign test agrees for three of the four (p<0.001,
+p<0.001, p=0.018 respectively) but not IEEE-14 detection specifically
+(p=0.059, 11 of 15 non-zero seeds positive) -- the weakest-supported of
+the four. A Bonferroni correction for testing six gaps at once (needing
+p<0.0083 for family-wise 95% confidence) leaves the same three
+surviving; IEEE-14 detection does not clear it. Both 5-bus gaps remain
+clearly null (p=0.849, p=0.500 by t-test). Sixteen seeds is a
+convenience choice, not a formal power calculation, and effect sizes
+remain small (0.009-0.028 points) relative to the much larger
+residual+prior-vs-either-alone gain reported above.
+
+Put plainly: the two standard IEEE systems now behave alike on both
+tasks, and differently from the small custom 5-bus microgrid, which
+shows no gap on either task -- not, as the 4-seed pilot suggested, a
+different single task favored at each network. Three separately-written
+pipelines needing the same category of feature-leakage fix, and then a
+second, more serious category of mistake (oracle information reaching a
+feature meant to be deployable) surviving a first full audit only to be
+caught in a second, more adversarial one, remains the finding we'd want
+a reader to take away alongside the numbers: neither kind of bug was
+visible from results alone -- both were found only by reading
+feature-computation code line by line against "could a real, deployed
+detector actually compute this." Full per-seed numbers for all 16
+seeds, and the complete before/after account of both audit rounds plus
+the seed-count expansion, are in `STATUS.md` §6.
 
 Two further things remain central. First, the detector does **not**
 generalize to an attack type it never trained on (0-1.3% recall when
@@ -170,25 +188,34 @@ archive/                Four early, pre-stress-test versions of the
 23_*_FIXED/HARD/HARDER.py  Detection + localization evaluation
 24_realtime_latency_*.py   Phase 2T: latency measurement and fixes
 25_wls_overhead_diagnostic.py   Root-cause split of the latency gap
-26_multi_seed_replication.py    4-seed statistical validation
+26_multi_seed_replication.py    16-seed statistical validation
+                       (quadrupled from an original 4-seed pilot,
+                       2026-09-25, to resolve the cross-network pattern
+                       below statistically)
 27_held_out_attack_type_*.py    Zero-day generalization test
 28_ieee14_scale_replication.py  The IEEE 14-bus scale study
                        (confirmed at n=500, matching the 5-bus study's
                        own 300-scenario test-set size)
 29_paper_figures.py    Generates figures/paper_fig*.png from results/
-30_ieee14_multi_seed_replication.py  4-seed replication of 28, same
+30_ieee14_multi_seed_replication.py  16-seed replication of 28, same
                        pattern as 26 -- confirms the IEEE-14
-                       localization result isn't single-run noise
+                       localization result isn't single-run noise, and
+                       at 16 seeds also resolves an IEEE-14 detection
+                       gap the original 4-seed pass had called null
 31_ieee30_scale_replication.py  A third network (IEEE 30-bus), direct
                        copy of 28 with the network swapped -- tests
                        whether IEEE-14's pattern generalizes
-32_ieee30_multi_seed_replication.py  4-seed replication of 31, same
-                       pattern as 30 -- re-run twice: first found
+32_ieee30_multi_seed_replication.py  16-seed replication of 31, same
+                       pattern as 30 -- re-run three times: first found
                        IEEE-30's single-run match to IEEE-14 was a seed
                        coincidence (localization null); re-run again
                        after 31's oracle-residual/model-selection audit
                        fix found a detection gap positive in all 4
-                       tested seeds instead, new to that later pass
+                       tested seeds instead, new to that later pass; a
+                       third pass (2026-09-25) quadrupled to 16 seeds
+                       and additionally resolved the localization gap
+                       (previously null at 4 seeds) as statistically
+                       confirmed too
 33_feature_redundancy_diagnostic.py  Out-of-fold Ridge/R^2 check that
                        the paper's Discussion cited but no earlier
                        script actually computed -- written to close
@@ -253,14 +280,14 @@ scripts, in the order this session actually ran them:
 python3 exploration/08_multirate_operating_dataset.py   # generates data/phase2e_7day_operating_dataset.csv, required by every script below -- run this first on a clean clone
 python3 22_graph_ready_protected_prior_telemetry_HARD.py --n-rep 500
 python3 23_topology_aware_cyber_physical_localization_HARD.py
-python3 26_multi_seed_replication.py          # ~15-20 min, 4 full reruns, then auto-restores the primary-seed (20260812) snapshot -- 27 and 33 below both read data/phase2s_hard_graph_feature_matrix.csv directly and need that exact snapshot, not whichever seed this loop last ran
+python3 26_multi_seed_replication.py          # ~1h, 16 full reruns (quadrupled from an original 4-seed/~15-20min pilot), then auto-restores the primary-seed (20260812) snapshot -- 27 and 33 below both read data/phase2s_hard_graph_feature_matrix.csv directly and need that exact snapshot, not whichever seed this loop last ran
 python3 27_held_out_attack_type_generalization.py
 python3 24_realtime_latency_benchmark_FINAL.py   # also records results/phase2t_latency_environment.json (machine + software versions) for reproducible latency reporting
 python3 28_ieee14_scale_replication.py --n-rep 500   # slower per-replication than the 5-bus scripts; this is the confirmed run (§7 of STATUS.md) -- --n-rep 200 was an earlier, superseded pass
 python3 33_feature_redundancy_diagnostic.py   # must run HERE, not after 30 below -- 30's own seed loop overwrites data/phase2v_ieee14_node_feature_matrix.csv with its last seed (2024), and this script's IEEE-14 R^2 needs the primary-seed (20260921) run 28 just produced, not a multi-seed leftover (see this script's own --help). Its 5-bus side is separately safe because 26 above already restored that primary-seed snapshot.
-python3 30_ieee14_multi_seed_replication.py   # ~30-40 min, 4 full reruns of 28
+python3 30_ieee14_multi_seed_replication.py   # ~2h, 16 full reruns of 28 (quadrupled from an original 4-seed/~30-40min pilot); does NOT auto-restore the primary-seed snapshot afterward (unlike 26 above) -- re-run 28 before 33 if you need that snapshot again later
 python3 31_ieee30_scale_replication.py --n-rep 500
-python3 32_ieee30_multi_seed_replication.py   # ~30-40 min, 4 full reruns of 31
+python3 32_ieee30_multi_seed_replication.py   # ~2h, 16 full reruns of 31 (quadrupled from an original 4-seed/~30-40min pilot); also does not auto-restore the primary-seed snapshot afterward
 python3 29_paper_figures.py
 ```
 
@@ -313,27 +340,32 @@ the short version:
   57-source research log in RELATED_WORK.md still contains candidate
   sources not used by the manuscript.
 - Scale: three network topologies have now been tested, each to the
-  same 4-seed standard, each independently audited twice (feature-
-  leakage, then oracle-residual/test-set-model-selection --
-  `STATUS.md` §6 has the full account). Corrected result: detection
-  shows a gap consistently positive across all four tested seeds at
-  exactly one network (IEEE 30-bus, `31_ieee30_scale_replication.py` +
-  `32_ieee30_multi_seed_replication.py`); localization shows a gap
-  never negative across the same four seeds at exactly one, different,
-  network (IEEE 14-bus, `28_ieee14_scale_replication.py` +
-  `30_ieee14_multi_seed_replication.py`); 5-bus shows no such gap in
-  either task. This is a materially different finding from an earlier
-  pass, which (before the oracle-residual and test-set-selection bugs
-  were found) reported a uniform detection null and a localization
-  advantage confined to IEEE-14 only, with IEEE-30 null on both tasks.
-  Neither surviving gap is yet a statistically confirmed effect at
-  n=4 seeds -- a t-based 95% CI crosses zero for both, and a
-  distribution-free sign test gives p=0.0625 for IEEE-30 (4/4 seeds
-  positive) and p=0.125 for IEEE-14 (its one exact tie excluded per
-  sign-test convention, leaving 3/3 non-zero seeds positive, not 4/4),
-  short of p<0.05 either way (`STATUS.md` §6 has the full calculation).
-  We describe both as consistent in sign across every seed tested, not
-  as confirmed nonzero.
+  same 16-seed standard (quadrupled from an original 4-seed pilot,
+  2026-09-25, specifically to resolve this pattern statistically),
+  each independently audited twice before that (feature-leakage, then
+  oracle-residual/test-set-model-selection -- `STATUS.md` §6 has the
+  full account). Corrected, 16-seed result: the pattern is
+  network-specific, not task-specific. Both detection and localization
+  show a small, mostly statistically confirmed positive gap at both
+  standard IEEE systems -- IEEE 30-bus (`31_ieee30_scale_replication.py`
+  + `32_ieee30_multi_seed_replication.py`) and IEEE 14-bus
+  (`28_ieee14_scale_replication.py` + `30_ieee14_multi_seed_replication.py`)
+  -- while 5-bus shows no such gap on either task. This is materially
+  different from the 4-seed pilot immediately above, which made each
+  IEEE network appear to favor a single, different task; that pattern
+  turned out to sit within ordinary small-sample noise once the seed
+  count was quadrupled. Four of the six network/task gaps now have a
+  t-based 95% CI excluding zero and p<0.05 by t-test (IEEE-14 detection
+  p=0.011, IEEE-14 localization p<0.001, IEEE-30 detection p<0.001,
+  IEEE-30 localization p=0.007); a distribution-free sign test agrees
+  for three of the four, not IEEE-14 detection (p=0.059); a Bonferroni
+  correction for testing six gaps at once leaves the same three
+  surviving (`STATUS.md` §6 has the full calculation). We describe
+  IEEE-14 localization, IEEE-30 detection, and IEEE-30 localization as
+  confirmed at a conservative, multiple-comparisons-aware threshold,
+  IEEE-14 detection as directionally consistent but the
+  weakest-supported of the four, and 5-bus as clearly null on both
+  tasks.
 - A committed, reproducible script for the out-of-fold redundancy
   diagnostic (`33_feature_redundancy_diagnostic.py`) now exists; the
   paper's earlier 0.960/0.959 R² numbers were never backed by

@@ -26,7 +26,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent
 RESULTS = ROOT / "results"
 
-SEEDS = [20260921, 42, 777, 2024]  # identical to the IEEE-14 multi-seed run
+SEEDS = [20260921, 42, 777, 2024, 3, 11, 19, 37, 53, 71, 97, 131, 163, 197, 229, 251]  # identical to the IEEE-14 multi-seed run; 12 more appended for a 16-seed CI-tightening pass
 N_REP = 500
 
 

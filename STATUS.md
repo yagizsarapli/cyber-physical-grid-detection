@@ -1878,6 +1878,166 @@ no emoji anywhere, no generic AI-tell phrasing, the codebase's own
 comments are specific technical warnings (e.g. leakage-column and
 group-safety notes), not filler -- so there was nothing there to fix.
 
+### Update, 2026-09-25 (same day, continued): 4 seeds to 16 across all
+three networks and both tasks -- the central finding changed from
+task-specific to network-specific, and is now mostly statistically
+confirmed
+
+**What triggered this.** The author's own reply to the external
+pre-arXiv feedback ranked seed count as the single most scientifically
+valuable open item, ahead of everything else if time allowed, with an
+explicit constraint: it had to be the same protocol at all three
+networks, both tasks -- not just re-running the two seeds that already
+looked good.
+
+**What was done.** Appended 12 new seeds (3, 11, 19, 37, 53, 71, 97,
+131, 163, 197, 229, 251 -- arbitrary, distinct from the existing 5)
+to the \texttt{SEEDS} list in \texttt{26\_multi\_seed\_replication.py},
+\texttt{30\_ieee14\_multi\_seed\_replication.py}, and
+\texttt{32\_ieee30\_multi\_seed\_replication.py}, identically, bringing
+each to 16 total. Confirmed first that this was safe to do purely by
+appending: all three scripts index the primary seed as
+\texttt{SEEDS[0]} rather than a hardcoded count, so nothing else in the
+pipeline depends on there being exactly four. Ran all three scripts as
+parallel background processes (5-bus, IEEE-14, IEEE-30 write to
+different result files, confirmed no shared-file race) rather than
+sequentially, since a full sequential run would have been several
+hours; wall-clock was roughly 1-2 hours per network, overlapped.
+
+**Verification before trusting any of it.** Read each script's raw
+per-seed output directly, not just its own printed summary. Confirmed
+determinism: the first 4 rows of each new 16-row result file are
+byte-identical (to displayed precision) to the values already published
+in Tables IV/V of the previous version of \texttt{paper/main.tex} --
+e.g.\ IEEE-14 seed 42: \(-0.0134/+0.0467\) matches the paper's
+\(-0.013/+0.047\) exactly. This rules out a reseeding bug or any
+divergence in the underlying pipeline between the original run and
+this one; the new 12 seeds are a clean superset, not a different
+experiment. Recomputed every statistic independently with \texttt{scipy}
+(\texttt{ttest\_1samp}, \texttt{binomtest} for the sign test, a
+$t$-based 95\% CI) directly from the raw per-seed CSVs, not by hand and
+not by trusting the scripts' own printed summaries.
+
+**The result, in full** (all values 16-seed; the pre-existing 4-seed
+values are given for contrast):
+
+| Network | Task | 4-seed mean$\pm$std | 4-seed CI excl.\ 0? | 16-seed mean$\pm$std | 16-seed CI excl.\ 0? | sign $p$ | $t$-test $p$ |
+|---|---|---|---|---|---|---|---|
+| 5-bus | Det. | $+0.0075\pm0.012$ | no | $-0.0004\pm0.0086$ | no | 0.500 | 0.849 |
+| 5-bus | Loc. | $-0.0067\pm0.016$ | no | $+0.0029\pm0.0169$ | no | 0.212 | 0.500 |
+| IEEE-14 | Det. | $-0.0033\pm0.013$ | no | $+0.0090\pm0.0124$ | \textbf{yes} | 0.059 | 0.011 |
+| IEEE-14 | Loc. | $+0.0233\pm0.021$ | no | $+0.0175\pm0.0170$ | \textbf{yes} | $<$0.001 | $<$0.001 |
+| IEEE-30 | Det. | $+0.0392\pm0.029$ | no | $+0.0281\pm0.0192$ | \textbf{yes} | $<$0.001 | $<$0.001 |
+| IEEE-30 | Loc. | $+0.0017\pm0.023$ | no | $+0.0129\pm0.0164$ | \textbf{yes} | 0.018 | 0.007 |
+
+At 4 seeds, zero of six gaps had a CI excluding zero -- matching what
+the paper already honestly said. At 16 seeds, four do. 5-bus stays
+null on both tasks, tighter than before. IEEE-30 detection and IEEE-14
+localization -- the two gaps that were already sign-consistent at 4
+seeds -- both held up and tightened. IEEE-14 detection and IEEE-30
+localization -- both null at 4 seeds -- flipped to small, positive,
+CI-excluding-zero gaps at 16. A Bonferroni correction across all six
+simultaneous tests (needing $p<0.0083$ for family-wise 95\% confidence)
+still clears IEEE-14 localization, IEEE-30 detection, and IEEE-30
+localization; IEEE-14 detection ($p=0.011$ uncorrected) does not clear
+it, and is explicitly flagged throughout as the weakest-supported of
+the four rather than folded in uncritically.
+
+**Why the 4-seed IEEE-14 detection mean was negative when the true
+effect (per the 16-seed estimate) is positive**: not a red flag, an
+expected consequence of a small effect (0.009) sitting well inside a
+per-seed standard deviation (0.012-0.019 throughout). A 4-observation
+mean of a distribution with that little separation from zero is highly
+volatile; the four-seed pilot's own explicit caveat (a $t$-based CI
+crossing zero, a 10--20-seed recommendation) said exactly this, before
+any of this round's data existed. This round is that caveat being
+acted on, not contradicted.
+
+**The paper's central finding changed as a result**, from
+"task-and-network-specific, no uniform story" (the pattern the 4-seed
+pilot showed) to "network-specific, not task-specific" (both standard
+IEEE systems, both tasks, one custom microgrid, neither task) -- a
+materially cleaner, more publishable, and now mostly statistically
+confirmed story. Rewrote, on the author's explicit instruction ("sen
+yaz"): Abstract; Results~I's multi-seed paragraph and Fig.~1 caption
+(16-seed 5-bus numbers, still null); Table~III (16-seed 4-feature-set
+means); Fig.~4 and its caption; replaced the two separate 4-seed
+per-seed tables (Tables IV/V) with one combined 16-seed summary-
+statistics table (new Table~IV: mean, 95\% CI, sign $p$, $t$-test $p$,
+all six network/task cells, with a Bonferroni footnote) -- a per-seed
+listing of all 16 rows $\times$ 2 networks would not have fit
+comfortably in the IEEE column width, and the inferential statistics
+are the more useful presentation at this $n$ regardless; Cross-Network
+Result; the renamed "Statistical Confirmation at 16 Seeds" subsection
+(was "Statistical Caveat," and needed a new \texttt{\textbackslash
+label\{sec:scale-stats\}} since Section~\ref{sec:method}'s "16 seeds"
+sentence now forward-references it); Interpretation; all three
+Discussion paragraphs (the redundancy-diagnostic paragraph's own
+conclusion -- reduced linear recoverability does NOT explain IEEE-14's
+pattern -- was already correct and unchanged in substance, but its
+surrounding framing needed updating since the mystery it was originally
+explaining, "why only localization at IEEE-14," no longer exists in
+the same form); Limitations items 1 and 2; Conclusion; and the
+Contributions bullet in the Introduction that still described the old
+task-specific pattern (found by a full-file grep sweep after the
+section-by-section edits, not caught by section-by-section editing
+alone -- worth remembering to always do a final whole-file sweep after
+a rewrite this size). Mirrored identically to \texttt{arxiv/main.tex}
+(regenerated programmatically from the updated \texttt{paper/main.tex}
+via the same \texttt{"../figures/" -> ""} substitution
+\texttt{make\_arxiv\_submission.sh} itself uses, rather than
+hand-repeating $\sim$15 edits a second time) and to
+\texttt{PAPER\_DRAFT.md} (by hand, converting LaTeX macros to its own
+plain-prose/backtick style, including its own copy of the new combined
+table and its end-of-file "still needs" checklist).
+
+Also updated \texttt{29\_paper\_figures.py}: Fig.~1's suptitle
+("four independent seeds" $\to$ "16") and Fig.~4's three x-axis labels
+("4-seed mean" $\to$ "16-seed mean") were the only two hardcoded seed-
+count strings; the actual aggregation code already used \texttt{.mean()}/
+\texttt{.std()}/\texttt{len(seeds)} generically and needed no change to
+correctly average all 16 rows once the underlying CSVs had 16 rows.
+Regenerated all four figures; visually confirmed Fig.~1's 16 dots per
+bar and Fig.~4's new "(16-seed mean)" labels render correctly.
+
+Also updated \texttt{README.md}: the "Short answer" teaser line; the
+5-bus 4-seed numbers in "The headline result" (now shows both the
+original 4-seed figures and the current 16-seed ones, explicitly
+framed as "tighter, not overturned," rather than silently replacing
+history); inserted a new dated "Update, 2026-09-25" paragraph plus a
+rewritten statistics/caveat paragraph after the existing IEEE-14/30
+narrative, rather than deleting that narrative -- it remains accurate
+history of what the 4-seed pass found; the three multi-seed scripts'
+descriptions and timing comments in the Repository map and reproduce
+sequence (also added an explicit note there that 30/32, unlike 26,
+do not auto-restore the primary-seed snapshot afterward -- a
+pre-existing, already-documented asymmetry, not something this pass
+introduced, but worth surfacing directly at the point of use); and the
+"Scale" bullet in the closing status section.
+
+**Rebuild and final verification.** One new overfull hbox appeared
+after adding the 6-row summary table (16.29pt too wide) -- traced to
+the table itself (6 columns, no \texttt{\textbackslash resizebox}), not
+its footnote text (tightening the footnote wording first did not
+change the warning at all, which is what pointed at the table); wrapped
+it in \texttt{\textbackslash resizebox\{\textbackslash columnwidth\}}
+matching Table~I's existing pattern, confirmed the warning disappeared
+on rebuild. Full \texttt{pdflatex} $\to$ \texttt{bibtex} $\to$
+\texttt{pdflatex} $\times 2$ cycle after that: clean, no undefined
+citations, no overfull/underfull warnings of note, still 10 pages
+(the new combined table replacing two roughly balanced the added
+prose). Visually inspected pages 1 (Abstract), 7-9 (Table III/IV,
+Cross-Network Result, Statistical Confirmation, Discussion,
+Limitations, Conclusion) -- all read correctly, table wraps cleanly.
+\texttt{make\_arxiv\_submission.sh} re-run end to end; clean.
+
+**What this does not change.** The Redundancy Diagnostic numbers
+(5-bus $R^2=0.956$, IEEE-14 $R^2=0.966$) are computed from the
+primary-seed feature matrix only and are independent of the multi-seed
+loop; not re-run, not stale. Table~I (the single-primary-seed ablation)
+is likewise untouched. The latency benchmark, zero-day generalization
+test, and bibliography are unrelated to this pass.
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,
