@@ -50,7 +50,7 @@ warnings.filterwarnings("ignore")
 # ============================================================
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 RESULTS = ROOT / "results"
 FIGURES = ROOT / "figures"
@@ -363,7 +363,10 @@ def feature_columns(graph_df):
     }
 
     all_features = [
-        c for c in graph_df.columns if c not in metadata
+        c for c in graph_df.columns
+        if c not in metadata
+        and not c.startswith("eval_")
+        and not c.startswith("label_")
     ]
 
     residual_only = [
@@ -1012,7 +1015,7 @@ def plot_detection(metrics):
     ax.grid(axis="y", alpha=0.25)
     fig.tight_layout()
     fig.savefig(
-        FIGURES / "51_topology_detection_tradeoff.png",
+        FIGURES / "51_topology_detection_tradeoff_fixed.png",
         dpi=220,
     )
     plt.close(fig)
@@ -1064,7 +1067,7 @@ def plot_localization(metrics):
     ax.grid(axis="y", alpha=0.25)
     fig.tight_layout()
     fig.savefig(
-        FIGURES / "52_topology_localization_top1.png",
+        FIGURES / "52_topology_localization_top1_fixed.png",
         dpi=220,
     )
     plt.close(fig)
@@ -1090,7 +1093,7 @@ def plot_score_map(graph_df):
     ax.legend(fontsize=8)
     fig.tight_layout()
     fig.savefig(
-        FIGURES / "53_residual_vs_prior_graph_map.png",
+        FIGURES / "53_residual_vs_prior_graph_map_fixed.png",
         dpi=220,
     )
     plt.close(fig)
@@ -1127,7 +1130,7 @@ def save_rf_importance(graph_df, feat_sets):
     }).sort_values("importance", ascending=False)
 
     out.to_csv(
-        RESULTS / "phase2s_topology_rf_feature_importance.csv",
+        RESULTS / "phase2s_fixed_topology_rf_feature_importance.csv",
         index=False,
     )
 
@@ -1140,7 +1143,7 @@ def save_rf_importance(graph_df, feat_sets):
     ax.grid(axis="x", alpha=0.25)
     fig.tight_layout()
     fig.savefig(
-        FIGURES / "54_topology_fusion_feature_importance.png",
+        FIGURES / "54_topology_fusion_feature_importance_fixed.png",
         dpi=220,
     )
     plt.close(fig)
@@ -1260,22 +1263,22 @@ def main():
     # Save
     # ========================================================
     graph_df.to_csv(
-        DATA / "phase2s_graph_feature_matrix.csv",
+        DATA / "phase2s_fixed_graph_feature_matrix.csv",
         index=False,
     )
 
     node_learn.to_csv(
-        DATA / "phase2s_node_relational_feature_matrix.csv",
+        DATA / "phase2s_fixed_node_relational_feature_matrix.csv",
         index=False,
     )
 
     detection_df.to_csv(
-        RESULTS / "phase2s_cyber_detection_metrics.csv",
+        RESULTS / "phase2s_fixed_cyber_detection_metrics.csv",
         index=False,
     )
 
     localization_df.to_csv(
-        RESULTS / "phase2s_attack_localization_metrics.csv",
+        RESULTS / "phase2s_fixed_attack_localization_metrics.csv",
         index=False,
     )
 
@@ -1404,15 +1407,15 @@ def main():
     print(importance.head(15).to_string(index=False))
 
     print("\nSaved:")
-    print("  data/phase2s_graph_feature_matrix.csv")
-    print("  data/phase2s_node_relational_feature_matrix.csv")
-    print("  results/phase2s_cyber_detection_metrics.csv")
-    print("  results/phase2s_attack_localization_metrics.csv")
-    print("  results/phase2s_topology_rf_feature_importance.csv")
-    print("  figures/51_topology_detection_tradeoff.png")
-    print("  figures/52_topology_localization_top1.png")
-    print("  figures/53_residual_vs_prior_graph_map.png")
-    print("  figures/54_topology_fusion_feature_importance.png")
+    print("  data/phase2s_fixed_graph_feature_matrix.csv")
+    print("  data/phase2s_fixed_node_relational_feature_matrix.csv")
+    print("  results/phase2s_fixed_cyber_detection_metrics.csv")
+    print("  results/phase2s_fixed_attack_localization_metrics.csv")
+    print("  results/phase2s_fixed_topology_rf_feature_importance.csv")
+    print("  figures/51_topology_detection_tradeoff_fixed.png")
+    print("  figures/52_topology_localization_top1_fixed.png")
+    print("  figures/53_residual_vs_prior_graph_map_fixed.png")
+    print("  figures/54_topology_fusion_feature_importance_fixed.png")
 
 
 if __name__ == "__main__":

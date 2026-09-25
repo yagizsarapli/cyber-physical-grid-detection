@@ -21,7 +21,7 @@ from sklearn.metrics import (
 
 warnings.filterwarnings("ignore")
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 RESULTS = ROOT / "results"
 FIGURES = ROOT / "figures"
@@ -297,24 +297,15 @@ def apply_persistence(
     k,
     n,
 ):
-    """
-    Apply k-of-n persistence independently to each trajectory.
-
-    Important:
-    The input DataFrame may retain non-contiguous/global pandas indices
-    after train/validation/test filtering. Therefore we must NOT use those
-    labels as positional indices into a NumPy array.
-
-    We write alarms back with .loc using the original DataFrame labels.
-    """
     out = df.copy()
-
     out["raw_flag"] = (
         out[score_col] >= threshold
     ).astype(int)
 
-    # Index-safe initialization.
-    out["alarm"] = 0
+    persistent = np.zeros(
+        len(out),
+        dtype=int,
+    )
 
     for (
         scenario_id,
@@ -326,8 +317,10 @@ def apply_persistence(
         ],
         sort=False,
     ).groups.items():
+        idx = list(idx)
+
         block = out.loc[
-            list(idx)
+            idx
         ].sort_values(
             "window_end_s"
         )
@@ -338,7 +331,7 @@ def apply_persistence(
             dtype=int
         )
 
-        persistent_flags = np.zeros(
+        p = np.zeros(
             len(flags),
             dtype=int,
         )
@@ -357,19 +350,15 @@ def apply_persistence(
                 ].sum()
                 >= k
             ):
-                persistent_flags[i] = 1
+                p[i] = 1
 
-        # Safe label-aligned assignment.
-        out.loc[
-            block.index,
-            "alarm",
-        ] = persistent_flags
+        persistent[
+            block.index.to_numpy()
+        ] = p
 
-    out["alarm"] = out[
-        "alarm"
-    ].astype(int)
-
+    out["alarm"] = persistent
     return out
+
 
 def trajectory_metrics(
     scored,
@@ -1283,10 +1272,7 @@ def main():
         )
 
     print(
-        "\n=== PHASE 2J FIXED: CYBER-vs-PHYSICAL + ZERO-DAY BENCHMARK ==="
-    )
-    print(
-        "Persistence implementation: index-safe pandas .loc assignment"
+        "\n=== PHASE 2J: CYBER-vs-PHYSICAL + ZERO-DAY BENCHMARK ==="
     )
 
     windows = pd.read_csv(

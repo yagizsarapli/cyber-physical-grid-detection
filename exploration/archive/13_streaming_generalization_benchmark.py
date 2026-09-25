@@ -20,7 +20,7 @@ from sklearn.metrics import (
 
 warnings.filterwarnings("ignore")
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 RESULTS = ROOT / "results"
 FIGURES = ROOT / "figures"

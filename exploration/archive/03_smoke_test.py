@@ -2,7 +2,7 @@ import importlib.util
 from pathlib import Path
 import numpy as np
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def load_module(filename, module_name):

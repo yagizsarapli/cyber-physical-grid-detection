@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "results"
 FIGURES = ROOT / "figures"
 RESULTS.mkdir(exist_ok=True)

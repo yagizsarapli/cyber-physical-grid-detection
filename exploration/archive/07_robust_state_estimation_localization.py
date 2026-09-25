@@ -1,7 +1,6 @@
 from pathlib import Path
 import importlib.util
 import copy
-import logging
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -9,9 +8,7 @@ import pandapower as pp
 
 from pandapower.estimation import estimate
 
-logging.getLogger("pandapower").setLevel(logging.CRITICAL)
-
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "results"
 FIGURES = ROOT / "figures"
 RESULTS.mkdir(exist_ok=True)
@@ -46,7 +43,6 @@ RESIDUAL_THRESHOLD = 3.0
 ESTIMATORS = [
     {
         "name": "WLS",
-        "warm_start": False,
         "kwargs": {
             "algorithm": "wls",
             "init": "flat",
@@ -57,23 +53,18 @@ ESTIMATORS = [
     },
     {
         "name": "SHGM",
-        # pandapower 2.14.10 on the user's environment:
-        # SHGM does not reliably converge from flat start, but does converge
-        # when initialized from a converged WLS state.
-        "warm_start": True,
         "kwargs": {
             "algorithm": "irwls",
             "estimator": "shgm",
             "a": 5,
-            "init": "results",
+            "init": "flat",
             "tolerance": 1e-7,
-            "maximum_iterations": 50,
+            "maximum_iterations": 30,
             "calculate_voltage_angles": True,
         },
     },
     {
         "name": "LAV",
-        "warm_start": False,
         "kwargs": {
             "algorithm": "lp",
             "init": "flat",
@@ -353,39 +344,12 @@ def run_estimator(base_net, estimator, corrupted_indices):
     net = copy.deepcopy(base_net)
 
     try:
-        # SHGM in pandapower 2.14.10 is sensitive to initialization.
-        # Diagnostic test confirmed:
-        #   flat start   -> fails
-        #   WLS results -> converges
-        if estimator.get("warm_start", False):
-            wls_ok = bool(
-                estimate(
-                    net,
-                    algorithm="wls",
-                    init="flat",
-                    tolerance=1e-7,
-                    maximum_iterations=30,
-                    calculate_voltage_angles=True,
-                )
+        success = bool(
+            estimate(
+                net,
+                **estimator["kwargs"],
             )
-
-            if not wls_ok:
-                success = False
-            else:
-                success = bool(
-                    estimate(
-                        net,
-                        **estimator["kwargs"],
-                    )
-                )
-        else:
-            success = bool(
-                estimate(
-                    net,
-                    **estimator["kwargs"],
-                )
-            )
-
+        )
     except Exception:
         success = False
 
@@ -429,6 +393,7 @@ def run_estimator(base_net, estimator, corrupted_indices):
         "top3_hit": top3,
         "mean_bad_rank": mean_rank,
     }, residuals
+
 
 def run_one(case, repetition):
     truth = build_truth_network(case["case"])
@@ -510,7 +475,7 @@ def figure_voltage_detection_curve(agg):
     ax.spines["right"].set_visible(False)
     fig.tight_layout()
     fig.savefig(
-        FIGURES / "12_fixed_voltage_bias_detection_curve.png",
+        FIGURES / "12_voltage_bias_detection_curve.png",
         dpi=220,
         bbox_inches="tight",
     )
@@ -540,7 +505,7 @@ def figure_voltage_rmse_curve(agg):
     ax.spines["right"].set_visible(False)
     fig.tight_layout()
     fig.savefig(
-        FIGURES / "13_fixed_voltage_bias_state_rmse.png",
+        FIGURES / "13_voltage_bias_state_rmse.png",
         dpi=220,
         bbox_inches="tight",
     )
@@ -610,7 +575,7 @@ def figure_localization(agg):
     ax.spines["right"].set_visible(False)
     fig.tight_layout()
     fig.savefig(
-        FIGURES / "14_fixed_corruption_localization_benchmark.png",
+        FIGURES / "14_corruption_localization_benchmark.png",
         dpi=220,
         bbox_inches="tight",
     )
@@ -659,7 +624,7 @@ def figure_false_alarm_control(agg):
     ax.spines["right"].set_visible(False)
     fig.tight_layout()
     fig.savefig(
-        FIGURES / "15_fixed_false_alarm_control.png",
+        FIGURES / "15_false_alarm_control.png",
         dpi=220,
         bbox_inches="tight",
     )
@@ -674,9 +639,7 @@ if __name__ == "__main__":
     rows = []
     residual_frames = []
 
-    print("\n=== PHASE 2D FIXED: ROBUST STATE ESTIMATION + LOCALIZATION ===")
-    print(f"pandapower version: {pp.__version__}")
-    print("SHGM initialization: WLS warm-start -> IRWLS-SHGM")
+    print("\n=== PHASE 2D: ROBUST STATE ESTIMATION + LOCALIZATION ===")
     print(f"Monte-Carlo repetitions per case: {N_REPEATS}")
     print("Estimators: WLS, SHGM, LAV")
 
@@ -711,18 +674,18 @@ if __name__ == "__main__":
     agg = aggregate(runs)
 
     runs.to_csv(
-        RESULTS / "phase2d_fixed_robust_estimator_runs.csv",
+        RESULTS / "phase2d_robust_estimator_runs.csv",
         index=False,
     )
     agg.to_csv(
-        RESULTS / "phase2d_fixed_robust_estimator_summary.csv",
+        RESULTS / "phase2d_robust_estimator_summary.csv",
         index=False,
     )
 
     if residual_frames:
         residual_df = pd.concat(residual_frames, ignore_index=True)
         residual_df.to_csv(
-            RESULTS / "phase2d_fixed_example_localization_residuals.csv",
+            RESULTS / "phase2d_example_localization_residuals.csv",
             index=False,
         )
 
@@ -748,13 +711,13 @@ if __name__ == "__main__":
     )
 
     print("\nSaved:")
-    print("  results/phase2d_fixed_robust_estimator_runs.csv")
-    print("  results/phase2d_fixed_robust_estimator_summary.csv")
-    print("  results/phase2d_fixed_example_localization_residuals.csv")
-    print("  figures/12_fixed_voltage_bias_detection_curve.png")
-    print("  figures/13_fixed_voltage_bias_state_rmse.png")
-    print("  figures/14_fixed_corruption_localization_benchmark.png")
-    print("  figures/15_fixed_false_alarm_control.png")
+    print("  results/phase2d_robust_estimator_runs.csv")
+    print("  results/phase2d_robust_estimator_summary.csv")
+    print("  results/phase2d_example_localization_residuals.csv")
+    print("  figures/12_voltage_bias_detection_curve.png")
+    print("  figures/13_voltage_bias_state_rmse.png")
+    print("  figures/14_corruption_localization_benchmark.png")
+    print("  figures/15_false_alarm_control.png")
 
     print(
         "\nNEXT RESEARCH STEP:\n"

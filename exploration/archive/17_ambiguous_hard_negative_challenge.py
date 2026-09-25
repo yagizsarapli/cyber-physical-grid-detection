@@ -4,9 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from pandapower.powerflow import LoadflowNotConverged
-
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 RESULTS = ROOT / "results"
 FIGURES = ROOT / "figures"
@@ -142,8 +140,8 @@ def make_params(
         # dataset so legitimate disturbances can also trigger GFL limiting.
         p["physical_sag_vm_pu"] = float(
             rng.uniform(
-                0.30,
-                0.50,
+                0.25,
+                0.48,
             )
         )
 
@@ -312,8 +310,6 @@ def build_challenge_dataset(
     for challenge in CHALLENGES:
         accepted = 0
         attempts = 0
-        rejected_nonconvergent = 0
-        rejected_quality = 0
 
         print(
             f"\n--- {challenge} ---"
@@ -322,7 +318,7 @@ def build_challenge_dataset(
         while accepted < N_PER_CLASS:
             attempts += 1
 
-            if attempts > 30 * N_PER_CLASS:
+            if attempts > 10 * N_PER_CLASS:
                 raise RuntimeError(
                     f"Could not generate enough accepted "
                     f"{challenge} cases."
@@ -351,37 +347,14 @@ def build_challenge_dataset(
                 context,
             )
 
-            try:
-                frames = run_pair(
-                    scenario_id,
-                    challenge,
-                    underlying,
-                    context,
-                    p,
-                    rng,
-                )
-            except LoadflowNotConverged:
-                # This candidate lies outside the numerically solvable
-                # quasi-static AC operating region of the reduced-order model.
-                # Do NOT label it as a physical/cyber event outcome.
-                # Reject it and sample another operating point/severity.
-                rejected_nonconvergent += 1
-
-                if (
-                    challenge
-                    == "physical_deep_sag_with_gfl_limiting"
-                ):
-                    print(
-                        "  rejected candidate: "
-                        "AC power flow did not converge "
-                        f"(sag={p['physical_sag_vm_pu']:.3f} pu)"
-                    )
-                else:
-                    print(
-                        "  rejected candidate: "
-                        "AC power flow did not converge"
-                    )
-                continue
+            frames = run_pair(
+                scenario_id,
+                challenge,
+                underlying,
+                context,
+                p,
+                rng,
+            )
 
             event_df = frames[1]
 
@@ -414,7 +387,6 @@ def build_challenge_dataset(
                 )
 
             if not accept:
-                rejected_quality += 1
                 continue
 
             raw_frames.extend(
@@ -510,13 +482,6 @@ def build_challenge_dataset(
 
             scenario_id += 1
             accepted += 1
-
-        print(
-            f"  accepted={accepted} | "
-            f"attempts={attempts} | "
-            f"PF-rejected={rejected_nonconvergent} | "
-            f"quality-rejected={rejected_quality}"
-        )
 
     raw = pd.concat(
         raw_frames,
@@ -832,7 +797,7 @@ def main():
             )
 
     print(
-        "\n=== PHASE 2M FIXED: CONVERGENCE-SAFE AMBIGUOUS HARD-NEGATIVE CHALLENGE ==="
+        "\n=== PHASE 2M: AMBIGUOUS HARD-NEGATIVE CHALLENGE ==="
     )
 
     slow = pd.read_csv(

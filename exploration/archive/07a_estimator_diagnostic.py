@@ -13,7 +13,7 @@ from pandapower.estimation import estimate
 # Keep pandapower from flooding the terminal; we print explicit results below.
 logging.getLogger("pandapower").setLevel(logging.CRITICAL)
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def load_module(filename, module_name):

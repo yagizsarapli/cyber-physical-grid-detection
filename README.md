@@ -145,12 +145,24 @@ work.
 exploration/            Phases 2A-2P (01..20_*.py): microgrid model,
                        inverter models, WLS state estimation, early
                        cyber-vs-physical benchmarks -- built before
-                       this session, kept as the record of how the
-                       current design was arrived at. Nothing in the
-                       paper depends on this folder except one shared
-                       module (exploration/01_microgrid_topology.py,
-                       loaded by 21_*.py below) -- it is not part of
-                       the paper pipeline otherwise.
+                       this session. Two files are still live: 01_
+                       microgrid_topology.py (loaded by 21_*_HARD.py
+                       below) and 08_multirate_operating_dataset.py
+                       (run directly -- see "Reproducing this"; its
+                       output is required by every script below it).
+                       Everything else that was ever in this folder is
+                       now under exploration/archive/ -- superseded
+                       design work, not read by any script below, kept
+                       as the record of how the current design was
+                       arrived at.
+
+archive/                Four early, pre-stress-test versions of the
+                       21-23 pipeline (the plain, non-"_HARD" 21 and
+                       22, and both a plain and a _FIXED 23) --
+                       superseded once the stress-test attack
+                       magnitude and the localization fixes below were
+                       introduced. Not read by any script below or by
+                       the paper; kept for the record, not deleted.
 
 21_*_HARD.py           Attack generator, magnitude reduced toward the
                        sensor noise floor (this session's stress test)
@@ -211,12 +223,21 @@ figures/                The 4 figures embedded in the paper
 The numbering is a research log, not a build order: each script is a
 snapshot of one step, and a `_FIXED`/`_HARD`/`_HARDER` suffix means
 "same idea, corrected or stress-tested" rather than "replaces the
-original" -- the original is kept alongside it on purpose, as the
-record of what changed and why. `STATUS.md` narrates the actual
-sequence and reasoning; the file list alone won't make sense without
-it. The `exploration/` vs. root-level split follows the same logic at
-folder granularity: `exploration/` is "how we got here," root is "what
-the paper is."
+original." Where the original sits alongside its corrected/stress-
+tested version at the root (e.g. `24_realtime_latency_benchmark.py`
+next to `_WARMSTART`/`_OPTIMIZED`/`_FINAL`), that's on purpose: each
+one is a distinct, individually cited measurement in the paper's own
+optimization narrative, not a discarded draft. Where a root-level
+original predates a since-introduced stress test and nothing in the
+current paper depends on it any more (the plain `21`/`22` and the
+plain/`_FIXED` `23`), it has been moved to `archive/` instead, to keep
+the root directory limited to what the current paper actually uses.
+`STATUS.md` narrates the actual sequence and reasoning; the file list
+alone won't make sense without it. The `exploration/` vs. root-level
+split follows the same logic at folder granularity: `exploration/` is
+"how we got here," root is "what the paper is," and each level's own
+`archive/` holds what neither the paper nor any live script still
+reads.
 
 ## Reproducing this
 

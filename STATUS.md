@@ -1802,6 +1802,82 @@ claim the way the four checked ones did, so this was judged acceptable
 for a "final sanity pass" rather than a full re-audit. The repo-
 visibility flip and any seed-count expansion remain the author's calls.
 
+### Update, 2026-09-25 (same day, continued): repo reorganized before
+going public -- superseded scripts archived, live pipeline untouched
+
+The author asked, ahead of making the repo public, for it to not look
+like unreviewed AI-iteration debris and to be organized around only
+what the current study actually uses. Rather than guess, built the
+real dependency graph first: grepped every `.py` file (root and
+`exploration/`) for `load_module(...)` call sites and their actual
+filename arguments (these use `importlib.util.spec_from_file_location`
+for dynamic same-directory imports, so a plain `import`/`from` grep
+alone would have missed real dependencies), plus a separate sweep for
+which scripts read which `data/phase2*.csv` file. This caught a real,
+pre-existing inconsistency in the README's own claim that
+"`exploration/` contributes nothing except `01_microgrid_topology.py`"
+-- untrue: `exploration/08_multirate_operating_dataset.py` generates
+`data/phase2e_7day_operating_dataset.csv`, read by nine different
+root-level scripts (21/21\_HARD/22/22\_HARD/22\_HARDER/24/24\_FINAL/
+24\_OPTIMIZED/24\_WARMSTART/25), and is explicitly the first step in
+the README's own "Reproducing this" sequence. Would have broken the
+reproduction path if archived on the README summary's word alone.
+
+**Confirmed genuinely unused** (zero references anywhere, by filename
+string, in any `.py` file): all of `exploration/02` through `20`
+(including every `_FIXED`/`_V3`/`_RESEARCH_FIXED` variant and `07a`)
+except `01` and `08` (plain); and, at the root, the pre-stress-test
+originals `21_nonlinear_stealth_fdia_bdd_benchmark.py` (plain),
+`22_graph_ready_protected_prior_telemetry.py` (plain),
+`23_topology_aware_cyber_physical_localization.py` (plain), and
+`23_..._FIXED.py` -- all four superseded once the `_HARD` stress test
+was introduced, and the paper only ever reports Hard/Harder-condition
+numbers, never the pre-stress-test ones.
+
+**Deliberately left alone**: every other root-level variant, in
+particular `24_realtime_latency_benchmark.py`/`_WARMSTART`/
+`_OPTIMIZED`/`_FINAL`. These aren't code dependencies of anything
+either, but each is the individual, still-cited evidence for one step
+of the paper's own Section~V optimization narrative (42.98\,ms
+baseline $\to$ 37.14\,ms warm-start $\to$ the 1158$\times$ measurement-
+update fix) -- archiving these would have quietly made a paper claim
+non-reproducible, which is the opposite of what a public-release audit
+should do. This is a real, principled distinction, not just caution:
+"superseded experimental design, nothing current depends on it" vs.
+"an individually-cited measurement step," decided per file, not by
+suffix pattern.
+
+**Moved** (`git mv`, history preserved, nothing deleted): the 26
+confirmed-unused `exploration/` files to `exploration/archive/`; the 4
+confirmed-unused root files to a new top-level `archive/`. Every
+moved file defines `ROOT = Path(__file__).resolve().parent` (checked:
+all 30, no exceptions) -- now one directory deeper, so all 30 got a
+mechanical `.parent` $\to$ `.parent.parent` fix to keep their own
+internal data/results paths correct if anyone runs one directly later;
+`python3 -m py_compile` on all 30 confirmed no syntax breakage.
+Re-ran the full dependency grep after the move (not just before) to
+confirm zero dangling references from any remaining live file, and
+`py_compile`'d every remaining root/`exploration/` script too.
+
+**README updated** to match: the Repository map's `exploration/` entry
+now correctly names both live files (not just one) and points to
+`exploration/archive/`; a new `archive/` entry added; the "numbering
+is a research log" paragraph reworded to state the actual, now-
+per-file-justified policy (kept alongside at the root when
+individually cited by the paper, moved to `archive/` when fully
+superseded) instead of a blanket "everything is kept alongside on
+purpose" claim that was no longer true for these four. Root now holds
+17 `.py` files instead of 21; `exploration/`'s own top level holds 2
+instead of 26. Checked `.github/workflows/build-paper.yml` and every
+other tracked doc for a reference to any moved path -- none found, so
+none needed updating beyond the README sections above.
+
+Not done as part of this pass (out of scope, not asked for): rewriting
+comments/docstrings in the scripts that stayed. Spot-checked first --
+no emoji anywhere, no generic AI-tell phrasing, the codebase's own
+comments are specific technical warnings (e.g. leakage-column and
+group-safety notes), not filler -- so there was nothing there to fix.
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,

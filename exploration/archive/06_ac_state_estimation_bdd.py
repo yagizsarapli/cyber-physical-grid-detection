@@ -8,7 +8,7 @@ import pandapower as pp
 
 from pandapower.estimation import estimate, chi2_analysis
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "results"
 FIGURES = ROOT / "figures"
 RESULTS.mkdir(exist_ok=True)

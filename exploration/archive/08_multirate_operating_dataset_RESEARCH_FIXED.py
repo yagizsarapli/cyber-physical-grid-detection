@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 RESULTS = ROOT / "results"
 FIGURES = ROOT / "figures"
@@ -52,8 +52,8 @@ LOAD_B_BASE_MW = 0.025
 BESS_E_MWH = 0.080        # 80 kWh
 BESS_P_MAX_MW = 0.020     # 20 kW
 BESS_SOC_INIT = 0.55
-BESS_SOC_MIN = 0.15
-BESS_SOC_MAX = 0.90
+BESS_SOC_MIN = 0.20
+BESS_SOC_MAX = 0.85
 ETA_CHARGE = 0.95
 ETA_DISCHARGE = 0.95
 
@@ -65,27 +65,28 @@ START_TIMESTAMP = "2026-08-03 00:00:00"
 
 def smooth_cloud_factor(n):
     """
-    Slowly varying weather multiplier around 1.0 plus several cloud events.
+    Slowly varying normal weather variability only.
+
+    IMPORTANT:
+    Explicit physical cloud-transient events are NOT injected here.
+    They are applied later in the high-resolution transient layer so
+    matched normal/event counterfactuals start from the same baseline.
     """
-    x = RNG.normal(0.0, 0.025, n)
+    raw = RNG.normal(0.0, 0.045, n)
+
+    # Smooth over ~45 minutes to create realistic slow irradiance drift
+    # without inserting the labeled fast transient events themselves.
     kernel = np.ones(9) / 9.0
-    smooth = np.convolve(x, kernel, mode="same")
-    factor = np.clip(1.0 + smooth, 0.80, 1.05)
+    smooth = np.convolve(raw, kernel, mode="same")
 
-    # Representative cloud transients on multiple days.
-    windows = [
-        (1*SAMPLES_PER_DAY + 11*12, 8, 0.45),
-        (3*SAMPLES_PER_DAY + 14*12, 5, 0.35),
-        (5*SAMPLES_PER_DAY + 10*12, 10, 0.55),
-    ]
+    # Add a gentle multi-day modulation.
+    t = np.arange(n, dtype=float)
+    multiday = 0.035 * np.sin(
+        2.0 * np.pi * t / (2.8 * SAMPLES_PER_DAY)
+    )
 
-    for start, width, depth in windows:
-        stop = min(n, start + width)
-        if start < n:
-            factor[start:stop] *= depth
-
-    return factor
-
+    factor = 0.96 + smooth + multiday
+    return np.clip(factor, 0.78, 1.05)
 
 def solar_profile(index):
     hod = (
@@ -144,29 +145,73 @@ def reactive_from_pf(p_mw, pf=0.95):
     return p_mw * np.tan(phi)
 
 
-def bess_dispatch(net_demand_without_bess_mw, soc):
+def bess_dispatch(net_demand_without_bess_mw, soc, timestamp):
     """
+    Reserve-aware rule-based EMS.
+
     Positive result = BESS injects power into AC grid (discharge).
     Negative result = BESS absorbs power (charge).
-    """
-    desired = net_demand_without_bess_mw - GRID_TARGET_MW
-    p_cmd = np.clip(desired, -BESS_P_MAX_MW, BESS_P_MAX_MW)
 
-    # Energy limits over the next slow timestep.
+    Design goals
+    ------------
+    - preserve SOC diversity across the week
+    - charge from genuine PV surplus when available
+    - modestly shave evening peaks
+    - allow limited off-peak grid charging if reserve becomes low
+    - avoid driving the battery to its lower SOC limit all day
+
+    This is an operating-context EMS, not an optimized market controller.
+    """
+    hod = timestamp.hour + timestamp.minute / 60.0
+
+    p_cmd = 0.0
+
+    # 1) Prefer charging from PV surplus.
+    if net_demand_without_bess_mw < -0.002 and soc < BESS_SOC_MAX:
+        surplus = -net_demand_without_bess_mw
+        p_cmd = -min(surplus, 0.015, BESS_P_MAX_MW)
+
+    # 2) Peak shaving only during the evening peak.
+    elif (
+        17.0 <= hod < 22.0
+        and net_demand_without_bess_mw > 0.045
+        and soc > 0.35
+    ):
+        shave = net_demand_without_bess_mw - 0.045
+        p_cmd = min(shave, 0.015, BESS_P_MAX_MW)
+
+    # 3) Maintain emergency/control reserve using slow off-peak charging.
+    elif (
+        (hod >= 0.0 and hod < 5.0)
+        and soc < 0.45
+    ):
+        p_cmd = -min(0.006, BESS_P_MAX_MW)
+
+    # Enforce energy limits over the next slow timestep.
     if p_cmd > 0.0:
-        # Discharge.
-        available_mwh = max(0.0, (soc - BESS_SOC_MIN) * BESS_E_MWH)
-        max_from_soc = available_mwh * ETA_DISCHARGE / DT_H
+        available_mwh = max(
+            0.0,
+            (soc - BESS_SOC_MIN) * BESS_E_MWH
+        )
+        max_from_soc = (
+            available_mwh
+            * ETA_DISCHARGE
+            / DT_H
+        )
         p_cmd = min(p_cmd, max_from_soc)
 
     elif p_cmd < 0.0:
-        # Charge.
-        room_mwh = max(0.0, (BESS_SOC_MAX - soc) * BESS_E_MWH)
-        max_charge_from_soc = room_mwh / (ETA_CHARGE * DT_H)
+        room_mwh = max(
+            0.0,
+            (BESS_SOC_MAX - soc) * BESS_E_MWH
+        )
+        max_charge_from_soc = (
+            room_mwh
+            / (ETA_CHARGE * DT_H)
+        )
         p_cmd = max(p_cmd, -max_charge_from_soc)
 
     return float(p_cmd)
-
 
 def update_soc(soc, p_bess_mw):
     if p_bess_mw >= 0.0:
@@ -230,11 +275,6 @@ def run():
         dtype=float
     ).copy()
 
-    # Add a representative short load spike.
-    spike_start = 2*SAMPLES_PER_DAY + 18*12
-    spike_stop = min(N_STEPS, spike_start + 3)
-    load_a_p[spike_start:spike_stop] += 0.020
-
     labels = schedule_event_labels(index)
 
     net = topology.build_microgrid()
@@ -260,7 +300,7 @@ def run():
         q_lb = float(reactive_from_pf(p_lb, pf=0.95))
 
         net_without_bess = p_la + p_lb - p_pv
-        p_bess = bess_dispatch(net_without_bess, soc)
+        p_bess = bess_dispatch(net_without_bess, soc, ts)
 
         # In this slow operating layer BESS is unity-PF.
         q_bess = 0.0
@@ -404,6 +444,8 @@ def run():
             ),
             "min_soc": float(df["bess_soc"].min()),
             "max_soc": float(df["bess_soc"].max()),
+            "mean_soc": float(df["bess_soc"].mean()),
+            "soc_std": float(df["bess_soc"].std()),
         }
     ])
 
@@ -525,7 +567,7 @@ def run():
     )
     plt.close(fig)
 
-    print("\n=== PHASE 2E: 7-DAY MULTI-RATE DATASET BACKBONE ===")
+    print("\n=== PHASE 2E RESEARCH-FIXED: CLEAN 7-DAY OPERATING CONTEXT ===")
     print(f"Samples                 : {len(df)}")
     print(f"Resolution              : {STEP_MIN} min")
     print(
@@ -552,6 +594,14 @@ def run():
         f"BESS SOC range          : "
         f"{100*summary.iloc[0]['min_soc']:.1f}% .. "
         f"{100*summary.iloc[0]['max_soc']:.1f}%"
+    )
+    print(
+        f"BESS mean SOC           : "
+        f"{100*summary.iloc[0]['mean_soc']:.1f}%"
+    )
+    print(
+        f"BESS SOC std            : "
+        f"{100*summary.iloc[0]['soc_std']:.1f} percentage points"
     )
     print(
         f"Fast-event calendar rows: {len(event_calendar)}"
