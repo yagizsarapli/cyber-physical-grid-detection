@@ -139,7 +139,7 @@ Detection shows a small edge for \texttt{topology\_fusion} at this one seed, in 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{paper_fig1_multiseed_advantage.png}
-\caption{Topology\_fusion vs.\ the topology-free residual+prior ablation vs.\ prior\_only alone, across 4 independent random seeds (5-bus, hard attack magnitude). Bars: mean $\pm$ std. Dots: individual seed results. $n{=}300$ detection / $n{=}150$ cyber-only localization test scenarios per seed.}
+\caption{Topology fusion vs.\ the topology-free residual+prior ablation and the prior-only baseline across four independent random seeds (5-bus, hard attack magnitude). Bars show mean $\pm$ standard deviation; dots show individual seed results. $n{=}300$ detection / $n{=}150$ cyber-only localization test scenarios per seed.}
 \label{fig:multiseed}
 \end{figure}
 
@@ -169,7 +169,7 @@ The measurement table was being rebuilt from scratch every cycle via a general-p
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{paper_fig2_latency_waterfall.png}
-\caption{Latency waterfall from the original pipeline to the final, tuned one. The first hypothesis (warm-start) barely helped; the measurement-table fix did most of the work.}
+\caption{End-to-end latency after successive pipeline optimizations. In-place measurement updates account for most of the reduction; the lighter classifier provides a smaller additional improvement.}
 \label{fig:latency}
 \end{figure}
 
@@ -204,7 +204,7 @@ Stealth FDIA & res.+prior & 0.013 & 1.000 \\
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{paper_fig3_zeroday_generalization.png}
-\caption{Recall collapses when an attack type is withheld from training (\texttt{topology\_fusion} shown; \texttt{residual\_plus\_prior} is behaviorally identical, Table~\ref{tab:zeroday}).}
+\caption{Recall for attack types represented in training versus withheld from training (topology fusion shown; residual+prior is behaviorally identical, Table~\ref{tab:zeroday}).}
 \label{fig:zeroday}
 \end{figure}
 
