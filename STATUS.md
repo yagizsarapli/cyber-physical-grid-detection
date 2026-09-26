@@ -2652,6 +2652,89 @@ source into a separate bundle): a full \texttt{pdflatex} $\to$
 undefined-reference/fatal-error strings in \texttt{main.log}) -- clean,
 still 8 pages.
 
+### Update, 2026-09-26 (same day, continued): LinkedIn post published;
+a final GitHub audit found and fixed a second, larger history-privacy
+issue than first estimated
+
+The author published the Zenodo preprint to LinkedIn (a native document
+upload, not a plain link, per the earlier reach discussion) and then
+asked for one more full pass over GitHub/Zenodo/LinkedIn together
+before calling this done.
+
+**Zenodo DOI propagation.** The version DOI
+(\texttt{10.5281/zenodo.22977605}) returned ``DOI Not Found'' on
+\texttt{doi.org} when first checked -- confirmed directly via browser
+navigation, not assumed -- while the Zenodo record itself
+(\texttt{zenodo.org/records/22977605}) was already fully public and
+correct. A known DataCite/Handle System registration lag, not a
+submission problem; advised the direct \texttt{zenodo.org} URL in the
+meantime. Re-checked a few exchanges later and the DOI had activated,
+so the link used in the LinkedIn post's own first comment is the DOI.
+
+**A renamed local copy for the LinkedIn upload.** The author didn't
+want to hand out a file literally called \texttt{main.pdf}. Made a
+byte-identical copy --
+\texttt{Sarapli\_2026\_Topology-Aware\_FDIA\_Detection.pdf} -- for that
+purpose only; the tracked \texttt{paper/main.pdf} and the LaTeX build's
+own naming convention were left untouched, since renaming those would
+mean reworking the CI pipeline for a purely cosmetic gain.
+
+**Final repo hygiene sweep**, on top of the arXiv-tooling removal
+above: confirmed zero remaining \texttt{arxiv} references anywhere in
+tracked files or the CI workflow, zero zero-byte tracked files, zero
+TODO/FIXME/XXX markers in \texttt{.py} files, zero personal-email
+patterns in tracked file \emph{contents}. All clean.
+
+**A second git-history rewrite -- personal Gmail address in commit
+identity, larger in scope than first estimated.** The earlier public-
+release audit (above) had characterized this as affecting ``several
+early commits.'' Re-checked the actual current state directly rather
+than trusting that earlier characterization, given the author's
+instruction this time was a general ``remove anything unnecessary or
+wrong'' -- and it was wrong, or at least badly stale:
+\texttt{git log --all --format=\%ae} showed
+\texttt{yagiz.saraplii@gmail.com} as author/committer on
+\textbf{60 of 152} author-attributed commits on \texttt{main},
+including commits made earlier in \emph{this same session} (the
+arXiv-tooling-removal commits themselves). Root cause: both the
+repo-local and the global \texttt{git config user.email} had remained
+set to the Gmail address the entire time -- the noreply-address
+commits happened only when something else (a different tool or shell
+context) overrode it for that particular commit, not because the
+config had been durably fixed after the first (attribution-trailer)
+rewrite.
+
+Fixing this meant repeating the same category of action as the
+Claude-attribution removal -- \texttt{git filter-repo} plus a
+force-push -- but this time the repo is linked from an already-
+published, immutable Zenodo DOI and a live LinkedIn post, which changes
+the blast radius (anyone who cloned in the intervening minutes would
+diverge on the next pull). Surfaced this distinction explicitly and
+asked before acting, rather than treating the general cleanup
+instruction as authorizing a history rewrite by itself; the author
+confirmed.
+
+Executed with the same discipline as the first rewrite, plus one
+addition: since \texttt{git filter-repo} rewrites \emph{all} reachable
+refs by default, a plain \texttt{git tag} created immediately before
+running it would itself get swept into the rewrite and stop
+representing the true pre-rewrite state -- so the actual safety net
+this time was a standalone \texttt{git bundle --all} written outside
+the repository entirely
+(\texttt{cyber-physical-grid-detection-pre-gmail-rewrite-backup.bundle},
+21\,MB, checked with \texttt{git bundle verify}, holding all 7 refs
+including the stash and all three existing tags), not the tag itself.
+Dry-run first, in a disposable clone
+(\texttt{--email-callback 'return email.replace(...)'}\,); confirmed
+identical root-tree hash and identical commit count before and after,
+zero \texttt{gmail} occurrences left. Only then repeated on the real
+repository, re-verified the same three invariants there, force-pushed,
+and independently re-confirmed via the GitHub API's own commit listing
+(not just local git) that no Gmail address remains anywhere in the
+public history. Also fixed the repo-local \texttt{git config
+user.email} to the noreply address, so this doesn't silently recur on
+the next commit the way it apparently did after the first rewrite.
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,
