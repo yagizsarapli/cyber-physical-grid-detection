@@ -140,7 +140,7 @@ fig, ax = plt.subplots(figsize=(8.5, 4.6))
 x = np.arange(len(steps))
 bars = ax.bar(x, values, color=colors, width=0.6, zorder=3)
 ax.axhline(20.0, color=INK, linewidth=1.4, linestyle=(0, (4, 3)), zorder=2)
-ax.annotate("20 ms budget (1 cycle @ 50 Hz)", xy=(0.6, 20.0),
+ax.annotate("20 ms reference (1 cycle @ 50 Hz)", xy=(0.6, 20.0),
             xytext=(0.6, 20.0 + 3.2), ha="left", fontsize=9, color=INK)
 ax.set_xticks(x)
 ax.set_xticklabels(labels, fontsize=8.8)
