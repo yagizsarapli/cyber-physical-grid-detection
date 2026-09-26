@@ -2385,6 +2385,69 @@ work); grepped afterward to confirm no orphaned reference to the
 removed number remained. Rebuilt clean, still 8 pages.
 \texttt{make\_arxiv\_submission.sh} re-run; clean.
 
+### Update, 2026-09-26 (same day, continued): a final prose-polish
+pass plus an arXiv source-package hygiene audit, before submission
+
+The author relayed one more, explicitly final-round reviewer list: no
+new experiments, seven prose/hygiene items. Applied all seven:
+
+- Removed four specific LLM-sounding transition phrases the reviewer
+  named directly (``The present analysis addresses'' $\to$ ``We
+  instead ask''; ``Critically, the prior is constructed...This is what
+  lets stealth attacks...become visible at all'' $\to$ dropped
+  ``Critically,'' and reworded to ``As a result...become visible'';
+  ``supporting a near-zero effect'' $\to$ ``consistent with a
+  near-zero effect'' (more conservative, an evidence-neutral phrase
+  instead of one implying the data actively argues for the null);
+  ``Together, these results motivate...'' $\to$ ``Both gaps matter for
+  deployment: ... should each be evaluated'').
+- Tightened the Poland-incident paragraph (Introduction) from two
+  sentences to one plus a shorter second, same facts, fewer words.
+- Cut the Abstract's closing sentence entirely -- it restated the
+  three findings already given with full numbers two sentences
+  earlier, pure summary with no new content. 167 $\to$ 139 words.
+- Split three overlong sentences identified by an automated length
+  scan (not eyeballing): the Prior Construction paragraph's 101-word
+  sentence (already being edited for the Critically/This-is-what-lets
+  fix, so combined into one edit); the Cross-Network Method safeguards
+  sentence (67 words, one comma-spliced list) into a claim sentence
+  plus a semicolon-separated list; and the Limitations
+  ``multiple comparisons'' item's 65-word opening (split at the
+  existing em-dash boundary).
+- Cut one more Discussion redundancy: its closing paragraph opened by
+  restating ``small positive gaps at both standard IEEE systems and
+  near-zero gaps at 5-bus'' -- already said, in full, with exact
+  numbers, in the section's own opening paragraph two paragraphs
+  earlier. Removed the restatement, kept the actual point (the
+  causal-vs-descriptive caveat) as a standalone opening clause.
+
+**Source-package hygiene, the item the reviewer flagged as most
+important** (arXiv redistributes source files, not just the compiled
+PDF): audited every comment in \texttt{paper/main.tex} and
+\texttt{paper/references.bib} individually rather than just grepping
+for obviously bad words. Found and removed two genuine issues: a
+\texttt{references.bib} comment reading ``resolving the earlier TODO
+here'' -- exactly the kind of audit-process language this project has
+spent multiple rounds scrubbing from the paper itself, that had
+nonetheless leaked into the bibliography file, which ships in the
+arXiv source tarball just as much as \texttt{main.tex} does; and a
+main.tex preamble comment about SmartGridComm venue fit and page-limit
+strategy that served no compilation purpose and was also stale (said
+``10-page,'' the paper is 8). The remaining preamble comment (the
+BasicTeX Courier-font-substitution note) is purely technical and
+legitimately useful to anyone rebuilding the source, so it was kept.
+Also checked: no local file paths, usernames, or AI-tool names
+anywhere in either file (\texttt{grep -in} sweep, clean except the
+paper's own intentional GitHub URL); the four embedded figure PNGs'
+metadata is just standard matplotlib version tags, nothing
+machine-identifying. Re-verified against the actual distributed
+\texttt{arxiv\_submission.zip} contents directly, not just the source
+files before packaging.
+
+Full rebuild clean (8 pages, only cosmetic underfull-hbox warnings, no
+overfull boxes, no undefined citations). \texttt{make\_arxiv\_submission.sh}
+re-run against the final text; clean.
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,
