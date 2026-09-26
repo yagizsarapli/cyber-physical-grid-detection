@@ -1,0 +1,55 @@
+name: Prior-uncertainty sensitivity
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '34_prior_uncertainty_sensitivity.py'
+      - '.github/workflows/prior-sensitivity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sensitivity:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        batch:
+          - '20260812 42 777 2024'
+          - '3 11 19 37'
+          - '53 71 97 131'
+          - '163 197 229 251'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Generate operating dataset
+        run: python exploration/08_multirate_operating_dataset.py
+
+      - name: Run 5-bus 5-percent prior sensitivity
+        run: |
+          python 34_prior_uncertainty_sensitivity.py \
+            --n-rep 500 \
+            --prior-sigma 0.05 \
+            --prior-clip 0 \
+            --seeds ${{ matrix.batch }}
+
+      - name: Upload batch result
+        uses: actions/upload-artifact@v4
+        with:
+          name: prior-sensitivity-${{ strategy.job-index }}
+          path: results/phase2aa_5bus_prior_sigma_0p050_sensitivity.csv
+          if-no-files-found: error
