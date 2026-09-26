@@ -2522,6 +2522,101 @@ with no ``Student'' framing at all; this one explicitly states status).
 Full rebuild clean, still 8 pages. \texttt{make\_arxiv\_submission.sh}
 re-run; clean.
 
+### Update, 2026-09-26 (same day, continued): a citation mischaracterization
+fixed, and a second one found independently while checking it; then a
+comprehensive public-release re-audit and an arXiv-endorsement dead end
+
+**The citation fix.** The author relayed a reviewer note: the Related
+Work sentence ``the threat model follows Liu, Ning \& Reiter's...
+construction and AC-consistent extensions \cite{anwar2016modeling}''
+mischaracterizes \texttt{anwar2016modeling} -- the reviewer's own read
+of that paper's abstract says it constructs attacks \emph{without}
+system/topology/line-reactance knowledge, not merely ``AC-consistent.''
+Verified independently before editing anything (a citation's own
+content, not just its bibliographic metadata, needed checking this
+time): \texttt{api.semanticscholar.org} didn't have the abstract, but a
+targeted web search surfaced it directly, and confirmed the reviewer's
+reading exactly -- ``FDI attacks can be constructed blindly, i.e.,
+without system knowledge, including topological connectivity and line
+reactance information.'' The reviewer was right.
+
+While re-reading the same paragraph to fix \texttt{anwar2016modeling},
+noticed the current text also groups \texttt{falas2026learning} in
+with it under ``topology-blind generative or physics-informed
+attacks.'' Checked that one too, independently -- its own abstract
+("Physics-Informed Neural Networks (PINNs) limit candidate states
+through power-flow consistency...") shows it is a \emph{defense}
+method (secure state estimation), not an attack-construction paper at
+all. The reviewer's own suggested fix (grouping \texttt{[5]--[8]}
+under one ``stealthy and model-limited attack construction'' citation
+range) would have kept this second error in place, since it doesn't
+distinguish \texttt{falas2026learning} from the genuine attack-
+construction citations around it -- worth catching independently
+rather than applying the suggested range as given.
+
+Fixed both, precisely: reworded the Foundational FDIA subsection so
+\texttt{anwar2016modeling} sits correctly alongside
+\texttt{du2021targeted} and \texttt{zhao2025blind} as reduced-
+attacker-knowledge constructions, and moved \texttt{falas2026learning}
+out of that sentence entirely into the Deep-Learning FDIA Detection
+subsection, described accurately as a physics-informed secure-
+estimation method distinct from the CNN/LSTM detection line already
+discussed there. Rebuilt clean, still 8 pages.
+
+**A second, broader public-release audit**, at the author's explicit
+request (``benim kişisel bilgim var mı gereksiz bilgi dosya var mı'')
+-- more thorough than the earlier one, since the repo has grown
+substantially since then (the sensitivity sweep, two new CI workflows,
+an expanded \texttt{STATUS.md}). Checked, beyond what the first audit
+covered: every commit author/committer identity across full history;
+phone numbers, non-institutional emails, and named-third-party
+mentions in file contents; casual/unprofessional language and emoji
+across \emph{all} tracked files, not just the paper (a Python-based
+scan, since \texttt{git grep}'s regex engine choked on the emoji
+Unicode range); TODO/FIXME markers in every \texttt{.py} file; largest
+tracked files; \texttt{.gitignore} completeness; and every occurrence
+of ``gridra''/``GRIDRA'' to rule out an unrelated-project leak.
+
+Found one genuine issue: several early commits carry the author's
+personal Gmail address as the git author/committer identity, rather
+than GitHub's privacy-preserving noreply alias that later commits use
+-- real personal information, visible in public commit history.
+Surfaced this directly rather than fixing it unprompted, given fixing
+it would mean a second git-history rewrite this session and the author
+was mid-arXiv-submission at the time; left for a later, explicit
+decision. Everything else came back clean: no secrets anywhere in
+current files or full history (re-confirmed), no OS junk files, no
+other personal contact information, no unprofessional language, no
+stray TODOs, reasonable file sizes, complete \texttt{.gitignore}.
+The two emoji-like characters found in \texttt{STATUS.md} (a
+$\bigcirc$ and a warning triangle, used earlier in the session as
+functional priority/caution flags, not decoration) and the
+\texttt{\textbackslash bigstar} rating markers in
+\texttt{RELATED\_WORK.md} were judged not worth removing -- both are
+working-log documents, not the paper itself, and both symbols are
+functional rather than decorative. ``gridra'' turned out to be the
+author's own pandapower network-attribute naming convention, used
+throughout the live scripts' actual code (\texttt{net.gridra[...]})
+and already visible in the repo's own directory name -- not private
+information, not touched.
+
+**arXiv endorsement dead end.** The author's account (registered,
+\texttt{eess} group, \texttt{Grad Student} status) is not endorsed for
+the \texttt{eess} archive, and has no immediate path to an endorser.
+Rather than stall on arXiv specifically, checked live whether
+\texttt{TechRxiv} (IEEE's own preprint server, no endorsement gate,
+and the more natural topical fit given this paper is already IEEEtran-
+formatted) was a viable same-day alternative -- it is not: a web
+search confirmed TechRxiv's submissions are currently closed for a
+platform migration. Recommended \textbf{Zenodo} instead (no
+endorsement gate, DOI issued immediately on publish, no moderation
+queue for a standard deposit, unlike \texttt{TechRxiv}'s own
+$\sim$4-business-day review even when open) as the same-day path, with
+arXiv endorsement pursued in parallel and the preprint added there
+later if/when an endorser is found -- cross-posting a not-yet-formally-
+published preprint across multiple repositories is standard practice,
+not a conflict.
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,
