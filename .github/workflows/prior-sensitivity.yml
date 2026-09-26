@@ -17,11 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        batch:
-          - '20260812 42 777 2024'
-          - '3 11 19 37'
-          - '53 71 97 131'
-          - '163 197 229 251'
+        seed: [20260812, 42, 777, 2024, 3, 11, 19, 37, 53, 71, 97, 131, 163, 197, 229, 251]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,11 +41,11 @@ jobs:
             --n-rep 500 \
             --prior-sigma 0.05 \
             --prior-clip 0 \
-            --seeds ${{ matrix.batch }}
+            --seeds ${{ matrix.seed }}
 
       - name: Upload batch result
         uses: actions/upload-artifact@v4
         with:
-          name: prior-sensitivity-${{ strategy.job-index }}
+          name: prior-sensitivity-${{ matrix.seed }}
           path: results/phase2aa_5bus_prior_sigma_0p050_sensitivity.csv
           if-no-files-found: error
