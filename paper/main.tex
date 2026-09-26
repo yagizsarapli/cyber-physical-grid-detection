@@ -183,7 +183,7 @@ The timing benchmark uses a separate 35-feature representation (7 local-plus-nei
 \subsection{Positioning}
 \cite{abukhousa2026latency} reports sub-15\,ms classifier inference embedded in 50--90\,ms end-to-end pipelines on an industrial-grade EMT simulator and recommends hardware acceleration. In the present implementation, a large fraction of the latency gap instead comes from avoidable software overhead, indicating that pipeline profiling should precede hardware acceleration. A knowledge-distilled LightGBM detector for virtualized microgrids likewise reports only 54--67\,ms per 1000 samples ($\sim$0.06\,ms/sample) for inference \cite{ogiesoba2026cyberattack}, comparable in scale to the 0.16--0.20\,ms inference step here and far below the 15.9--16.7\,ms state-estimation step.
 
-\section{Generalization to Withheld Attack Types}
+\section{Withheld Attack-Type Generalization}
 \label{sec:zeroday}
 
 Zero-day generalization is evaluated by withholding one entire attack family from training and validation, using the same HistGradientBoosting hyperparameters as the 5-bus detector. Recall is then measured on that withheld family under a symmetric test protocol (Table~\ref{tab:zeroday}, Fig.~\ref{fig:zeroday}). The experiment is repeated for both \texttt{topology\_fusion} and the topology-free \texttt{residual\_plus\_prior} ablation.
