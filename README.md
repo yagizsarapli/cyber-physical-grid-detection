@@ -1,8 +1,8 @@
 # Cyber-Physical Grid Detection
 
-Reproducible experiments for the manuscript **“Evaluating the Value of Topology-Aware Features for Cyber-Physical Grid Monitoring: Detection, Localization, and Real-Time Feasibility.”**
+Reproducible experiments for the manuscript **“Evaluating the Value of Topology-Aware Features for Cyber-Physical Grid Monitoring: Detection, Localization, and End-to-End Latency.”**
 
-The study evaluates whether explicit topology-relational features improve false-data-injection attack (FDIA) detection and localization beyond a matched topology-free baseline, and separately measures end-to-end real-time feasibility.
+The study evaluates whether explicit topology-relational features improve false-data-injection attack (FDIA) detection and localization beyond a matched topology-free baseline, and separately profiles end-to-end computational latency.
 
 ## Main results
 
@@ -13,7 +13,7 @@ The study evaluates whether explicit topology-relational features improve false-
 - **Latency:** pipeline optimization reduces median end-to-end latency from **42.98 ms** to **16.2–17.0 ms**. Across two independent 300-trial reruns, p99 is **17.0–19.2 ms**, while rare maxima remain above the 20 ms reference (**89.1–92.7 ms**).
 - **Unseen attack types:** when an entire attack family is withheld from training, recall collapses to **0–1.3%**, versus **91–100%** when that family is represented in training.
 
-The cross-network result is intentionally interpreted as **setup-dependent**: the 5-bus and IEEE systems do not use identical measurement-noise and prior-uncertainty settings.
+The cross-network result is intentionally interpreted as **setup-dependent**: the 5-bus and IEEE systems differ in measurement/prior settings and in feature representation. Within each network, the controlled contrast is `topology_fusion` versus the matched `residual_plus_prior` ablation.
 
 ## Manuscript
 
@@ -34,6 +34,7 @@ The cross-network result is intentionally interpreted as **setup-dependent**: th
 | `28_ieee14_scale_replication.py`, `30_ieee14_multi_seed_replication.py` | IEEE 14-bus evaluation |
 | `31_ieee30_scale_replication.py`, `32_ieee30_multi_seed_replication.py` | IEEE 30-bus evaluation |
 | `33_feature_redundancy_diagnostic.py` | Out-of-fold relational-feature redundancy diagnostic |
+| `34_prior_uncertainty_sensitivity.py` | 5-bus prior-uncertainty robustness sweep |
 | `29_paper_figures.py` | Generates the manuscript figures |
 | `exploration/08_multirate_operating_dataset.py` | Generates the operating dataset required by the main experiments |
 | `archive/`, `exploration/archive/` | Superseded exploratory scripts; not used for reported manuscript results |
@@ -110,7 +111,7 @@ The ZIP contains only the LaTeX source, bibliography, and four manuscript figure
 
 ## Scope
 
-The manuscript evaluates three synthetic/test networks, two attack families, and one documented latency environment. The cross-network comparison is not a controlled topology-only experiment because the 5-bus and IEEE cases use different noise/prior settings. These limitations are stated explicitly in the paper.
+The manuscript evaluates three synthetic/test networks, two attack families, and one documented latency environment. The cross-network comparison is not a controlled topology-only experiment because the 5-bus and IEEE cases differ in measurement/prior settings and feature representation. These limitations are stated explicitly in the paper.
 
 ## Contact
 
