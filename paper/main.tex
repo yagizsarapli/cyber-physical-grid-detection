@@ -67,16 +67,16 @@ The threat model follows Liu, Ning \& Reiter's foundational FDIA construction \c
 \subsection{Deep-Learning FDIA Detection}
 CNN, LSTM, and transfer-learning architectures have been applied extensively to FDIA detection \cite{niu2018dynamic,li2021adversarial,xu2021detecting}, typically as binary classification on a fixed attack distribution. The \texttt{residual\_only} and \texttt{prior\_only} baselines used here are consistent with this setting. The present ablation isolates the marginal contribution of explicit topology-relational features beyond their topology-free combination, under deployable feature construction and validation-only model selection.
 
-\subsection{Topology-Aware / Graph-Based State Estimation and Detection}
+\subsection{Topology-Aware and Graph-Based State Estimation}
 Topology-aware graph neural network (GNN) methods use graph convolution or attention to exploit network structure in state estimation \cite{moshtagh2025topology,moshtagh2022timesync,suri2025powergnn,yaniv2026robust}. Prior work presents a mixed picture. \cite{moshtagh2025topology} and an earlier, closely related study by an overlapping author group \cite{moshtagh2022timesync} compare their GNN against a same-feature ``regular'' DNN baseline (identical PMU-derived node features, no adjacency matrix), providing a correctly scoped topology ablation; \cite{suri2025powergnn}'s non-graph baseline, by contrast, does not clearly document an input-matched comparison. These studies show that topology ablation is not absent from the literature. The present analysis addresses a complementary question: whether explicitly relational features add information beyond a matched topology-free feature set before model architecture becomes a confounding factor. Section~\ref{sec:results1} also evaluates the linear recoverability of relational features from the topology-free representation as a model-independent redundancy diagnostic.
 
-\subsection{Attack/Event Localization}
+\subsection{Attack and Event Localization}
 Localization work spans capsule networks for load-altering (not FDIA) attacks evaluated across 14/39/57-bus systems \cite{jahangir2022localizing}, moving-target-defense-assisted localization \cite{chen2022localization}, and online detection-plus-localization schemes \cite{li2021online}. The cited localization studies do not explicitly document sensitivity to network topology/meshedness or an ablation of relational features against a matched non-relational baseline, which is the comparison examined in Sections~\ref{sec:results1} and \ref{sec:scale}.
 
-\subsection{Real-Time / Latency-Aware Classification}
+\subsection{Latency-Aware Detection and Classification}
 \cite{abukhousa2026latency} provides the closest latency comparison: on a larger industrial electromagnetic-transient (EMT) testbed, classifier inference is fast while end-to-end latency remains substantially higher. Section~\ref{sec:latency} examines the same pipeline-level question and isolates a software-level bottleneck in the present implementation.
 
-\subsection{Zero-Day / Unseen-Attack Generalization}
+\subsection{Generalization to Unseen Attack Types}
 Generalization to attack families absent from training remains an important deployment question. Section~\ref{sec:zeroday} evaluates this directly for the two FDIA families used here.
 
 \subsection{Broader Gaps Identified in Reviews}
