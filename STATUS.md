@@ -2617,6 +2617,41 @@ later if/when an endorser is found -- cross-posting a not-yet-formally-
 published preprint across multiple repositories is standard practice,
 not a conflict.
 
+### Update, 2026-09-26 (same day, continued): arXiv-specific tooling
+removed from the public repo now that publication went through Zenodo
+
+Since the actual publication ended up on Zenodo (see the endorsement
+dead end above), not arXiv, the author flagged that the public repo
+still carried arXiv-only packaging machinery that was never actually
+used for the thing that got published -- asked to remove it so the
+repo matches what was actually done, not an abandoned path.
+
+Removed, across the three places this logic was duplicated:
+- \texttt{make\_arxiv\_submission.sh} (the standalone packaging script)
+  and the CI-generated \texttt{arxiv\_preview.pdf} -- both
+  \texttt{git rm}'d; the untracked local \texttt{arxiv\_submission.zip}
+  deleted directly (never tracked, so no git operation needed).
+- \texttt{.github/workflows/build-paper.yml} -- removed the entire
+  ``Build and verify self-contained arXiv source'' step (built a
+  flattened tmpdir copy, compiled it, copied the result to
+  \texttt{arxiv\_preview.pdf}, zipped source and figures to
+  \texttt{arxiv\_submission.zip}), removed \texttt{arxiv\_preview.pdf}
+  from the \texttt{paths-ignore} trigger list, and stripped both
+  generated files from the subsequent commit and artifact-upload
+  steps. The workflow now only builds and commits
+  \texttt{paper/main.pdf}.
+- \texttt{README.md} -- removed the ``Rebuilding the paper''
+  subsection's pointer to the packaging script and its output
+  description.
+
+Verified the manuscript's own build has no dependency on any of this
+(it never did -- the script only ever repackaged the already-compiled
+source into a separate bundle): a full \texttt{pdflatex} $\to$
+\texttt{bibtex} $\to$ \texttt{pdflatex} $\times 2$ rebuild from a clean
+\texttt{paper/} directory, checked the same way CI checks it (grep for
+undefined-reference/fatal-error strings in \texttt{main.log}) -- clean,
+still 8 pages.
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,

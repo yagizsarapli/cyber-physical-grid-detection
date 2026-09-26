@@ -88,19 +88,6 @@ pdflatex -interaction=nonstopmode main.tex
 pdflatex -interaction=nonstopmode main.tex
 ```
 
-The repository also contains a packaging script for the arXiv source bundle:
-
-```bash
-bash make_arxiv_submission.sh
-```
-
-It produces:
-
-- `arxiv_preview.pdf`
-- `arxiv_submission.zip`
-
-The ZIP contains only the LaTeX source, bibliography, and four manuscript figures.
-
 ## Reproducibility notes
 
 - Train/validation/test splitting is performed at the **replication level**, so matched scenarios from one operating point cannot leak across partitions.

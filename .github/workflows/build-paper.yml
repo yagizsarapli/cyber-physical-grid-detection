@@ -5,7 +5,6 @@ on:
     branches: [main]
     paths-ignore:
       - 'paper/main.pdf'
-      - 'arxiv_preview.pdf'
       - 'figures/paper_fig2_latency_waterfall.png'
       - 'figures/paper_fig3_zeroday_generalization.png'
       - 'figures/paper_fig4_scale_comparison.png'
@@ -193,41 +192,11 @@ jobs:
             exit 1
           fi
 
-      - name: Build and verify self-contained arXiv source
-        run: |
-          TMP="$(mktemp -d)"
-          cp paper/main.tex paper/references.bib "$TMP"/
-          python3 - "$TMP/main.tex" <<'PY'
-          from pathlib import Path
-          import sys
-          p=Path(sys.argv[1])
-          s=p.read_text()
-          p.write_text(s.replace("../figures/",""))
-          PY
-          cp figures/paper_fig1_multiseed_advantage.png "$TMP"/
-          cp figures/paper_fig2_latency_waterfall.png "$TMP"/
-          cp figures/paper_fig3_zeroday_generalization.png "$TMP"/
-          cp figures/paper_fig4_scale_comparison.png "$TMP"/
-
-          cd "$TMP"
-          pdflatex -interaction=nonstopmode -halt-on-error main.tex >/dev/null
-          bibtex main >/dev/null
-          pdflatex -interaction=nonstopmode -halt-on-error main.tex >/dev/null
-          pdflatex -interaction=nonstopmode -halt-on-error main.tex >/dev/null
-
-          if grep -Eiq 'undefined references|Citation .* undefined|Reference .* undefined|There were undefined references|LaTeX Error|Emergency stop|Fatal error occurred' main.log; then
-            echo "arXiv source package failed final LaTeX validation."
-            exit 1
-          fi
-
-          cp main.pdf "$GITHUB_WORKSPACE/arxiv_preview.pdf"
-          zip -j "$GITHUB_WORKSPACE/arxiv_submission.zip" main.tex references.bib paper_fig*.png >/dev/null
-
       - name: Commit refreshed PDF
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add paper/main.pdf arxiv_preview.pdf figures/paper_fig2_latency_waterfall.png figures/paper_fig3_zeroday_generalization.png figures/paper_fig4_scale_comparison.png
+          git add paper/main.pdf figures/paper_fig2_latency_waterfall.png figures/paper_fig3_zeroday_generalization.png figures/paper_fig4_scale_comparison.png
           if git diff --cached --quiet; then
             echo "No generated-file changes to commit."
           else
@@ -241,6 +210,4 @@ jobs:
           name: final-paper
           path: |
             paper/main.pdf
-            arxiv_preview.pdf
-            arxiv_submission.zip
           if-no-files-found: error
