@@ -93,7 +93,7 @@ def main():
     slow = pd.read_csv(SLOW_PATH)
 
     print("\n=== PHASE 2T FINAL: N=300, all fixes combined ===")
-    print(f"Budget (net.f_hz={topology.build_microgrid().f_hz} Hz): {CYCLE_MS:.2f} ms/cycle")
+    print(f"Reference (net.f_hz={topology.build_microgrid().f_hz} Hz): {CYCLE_MS:.2f} ms/cycle")
 
     # Reproducibility metadata for machine-dependent latency claims.
     # The paper should report the exact benchmark environment rather than
@@ -229,7 +229,7 @@ def main():
         # array assembly (the t3-to-t4 gap) entirely. Both are real,
         # on-the-critical-path work a deployed cycle would also have to
         # do, and at p99 there was only 1.59ms of headroom under the
-        # 20ms budget -- not obviously enough to safely ignore an
+        # 20 ms reference -- not obviously enough to safely ignore an
         # unmeasured gap. Every stage is now timed with no gap between
         # timestamps, and total_ms is (t5-t0), the true, nothing-excluded
         # per-cycle wall-clock time; the four named sub-steps are kept
@@ -283,7 +283,7 @@ def main():
                         ("p95", np.percentile(total_ms, 95)),
                         ("p99", np.percentile(total_ms, 99)),
                         ("max", np.max(total_ms))]:
-        status = "within budget" if val <= CYCLE_MS else "OVER budget"
+        status = "below reference" if val <= CYCLE_MS else "ABOVE reference"
         print(f"{label:>6}: {val:7.3f} ms -> {status}")
 
     RESULTS.mkdir(exist_ok=True)
