@@ -206,7 +206,7 @@ def load_slow_dataset():
     return slow
 
 
-def prior_context_from_actual(context, rng):
+def prior_context_from_actual(context, rng, prior_sigma=0.025, prior_clip=0.06):
     """
     Protected prior:
       - PV and BESS setpoints are treated as authorized/protected commands.
@@ -217,8 +217,11 @@ def prior_context_from_actual(context, rng):
     """
     c = context.to_dict() if hasattr(context, "to_dict") else dict(context)
 
-    ea = float(np.clip(rng.normal(0.0, 0.025), -0.06, 0.06))
-    eb = float(np.clip(rng.normal(0.0, 0.025), -0.06, 0.06))
+    ea = float(rng.normal(0.0, prior_sigma))
+    eb = float(rng.normal(0.0, prior_sigma))
+    if prior_clip > 0:
+        ea = float(np.clip(ea, -prior_clip, prior_clip))
+        eb = float(np.clip(eb, -prior_clip, prior_clip))
 
     c["load_a_p_mw"] = max(0.0, float(c["load_a_p_mw"]) * (1.0 + ea))
     c["load_b_p_mw"] = max(0.0, float(c["load_b_p_mw"]) * (1.0 + eb))
@@ -887,6 +890,18 @@ def main():
         type=int,
         default=RANDOM_SEED,
     )
+    parser.add_argument(
+        "--prior-sigma",
+        type=float,
+        default=0.025,
+        help="Per-load prior forecast-error sigma as a fraction. Default: 0.025",
+    )
+    parser.add_argument(
+        "--prior-clip",
+        type=float,
+        default=0.06,
+        help="Symmetric absolute clip on prior error; <=0 disables clipping. Default: 0.06",
+    )
 
     args = parser.parse_args()
 
@@ -913,7 +928,8 @@ def main():
     print(f"Expected graph snapshots  : {args.n_rep * len(CASES)}")
     print("Nodes per graph           : 5")
     print("Edges per graph           : 4")
-    print("Prior load forecast sigma : 2.5% per load, clipped to +/-6%")
+    clip_label = "unclipped" if args.prior_clip <= 0 else f"clipped to +/-{100*args.prior_clip:.1f}%"
+    print(f"Prior load forecast sigma : {100*args.prior_sigma:.1f}% per load, {clip_label}")
     print("PV/BESS prior             : authorized operating commands")
     print("Split policy              : replication-group safe")
 
@@ -934,7 +950,7 @@ def main():
 
         # Same uncertain protected prior across all matched cases.
         prior_ctx, prior_err_a, prior_err_b = prior_context_from_actual(
-            context, rng
+            context, rng, prior_sigma=args.prior_sigma, prior_clip=args.prior_clip
         )
         prior_pack = solve_prior(prior_ctx)
 
