@@ -2356,6 +2356,35 @@ project's own \texttt{/tmp} download right now, not in \texttt{results/}
 or any tracked file -- worth the author's attention if this sweep's
 data should be preserved more durably than an Actions artifact.
 
+### Update, 2026-09-26 (same day, continued): pre-submission final
+checks, then one last reviewer-flagged detail removed
+
+Ran a full pre-arXiv-submission check: TODO/placeholder/FIXME sweep
+(clean, the one "TODO" hit was inside a comment describing an
+already-resolved one), every \texttt{\textbackslash ref} confirmed to
+have a matching \texttt{\textbackslash label}, a fresh end-to-end read
+of the rendered PDF text (no contradictions or stale leftovers found
+across the many independent editing passes this document has now had),
+and the four bibliography entries this project's own earlier "final
+sanity pass" had explicitly left unchecked
+(\texttt{falas2026learning}, \texttt{li2026physically},
+\texttt{lin2026state}, \texttt{sakr2026explainable}) verified directly
+against arXiv/CrossRef -- all four match exactly. All 24 cited
+references have now been checked against a primary source at least
+once across this session.
+
+The author then relayed two more reviewer points. The first (renaming
+Section VI to "Withheld Attack-Type Generalization") was confirmed
+already done, no action needed. The second: "training balanced
+accuracy 1.000," in the Final Benchmark subsection's description of
+the latency classifier's warm-up training set, could read as an
+overfitting signal out of context despite contributing nothing to the
+latency argument itself. Removed the clause entirely (kept the
+83-attack/67-clean scenario count, which does the actual descriptive
+work); grepped afterward to confirm no orphaned reference to the
+removed number remained. Rebuilt clean, still 8 pages.
+\texttt{make\_arxiv\_submission.sh} re-run; clean.
+
 ## Positioning against related work
 
 [arXiv:2605.17256](https://arxiv.org/pdf/2605.17256) (2026,
