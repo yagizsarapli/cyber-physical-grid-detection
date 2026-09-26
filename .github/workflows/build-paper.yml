@@ -177,6 +177,7 @@ jobs:
             31_ieee30_scale_replication.py \
             32_ieee30_multi_seed_replication.py \
             33_feature_redundancy_diagnostic.py \
+            34_prior_uncertainty_sensitivity.py \
             exploration/01_microgrid_topology.py \
             exploration/08_multirate_operating_dataset.py
 
