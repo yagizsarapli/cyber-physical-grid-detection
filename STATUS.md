@@ -302,12 +302,12 @@ doesn't rebuild its model every cycle).
 | Step | Median | p95 | p99 | Max | vs. 20ms |
 |---|---|---|---|---|---|
 | Original (`run_wls`, RandomForest, flat init, tol=1e-7, max_iter=40) | 42.98 ms | — | — | — | 2.15x over |
-| + WLS warm-start (`init="results"`) | 37.14 ms | — | — | — | 1.06x speedup only — **dead end** |
+| + WLS warm-start (`init="results"`) | 37.14 ms | — | — | — | 1.16x speedup only — **dead end** |
 | Diagnosis: split `run_wls` | `add_measurement_vector` 19.9ms + `estimate()` 19.4ms | | | | found the real 50/50 split |
 | Diagnosis H1: `max_iterations` 40→5 | no speed change | | | | rules out iteration count |
 | Diagnosis H1: `max_iterations`=3 | convergence collapses to 1/20 | | | | true need is ~4-5 iterations |
 | Diagnosis H2: `tolerance` 1e-7→1e-4 | ~14% faster on `estimate()` alone | | | | state error ~2e-9 pu, safe |
-| **Fix 1**: bulk-write `net.measurement["value"]` instead of looping `pp.create_measurement()` 23x/cycle | 19.4ms → **0.017ms (1158x)** | | | | verified **bit-identical** WLS output |
+| **Fix 1**: bulk-write `net.measurement["value"]` instead of looping `pp.create_measurement()` 23x/cycle | 19.4ms → **0.017ms (1141x)** | | | | verified **bit-identical** WLS output |
 | **Fix 2**: RandomForest → LogisticRegression | 2.88ms → 0.20ms inference | | | | competitive accuracy, see §2 |
 | **Final** (Fix 1 + Fix 2 + tol=1e-4/max_iter=10, N=300, 0 convergence failures) | **16.41 ms** | **16.95 ms** | **17.09 ms** | 21.35 ms | **median/p95/p99 within budget; 1 outlier over, ~6ms margin otherwise** |
 
@@ -2447,6 +2447,80 @@ files before packaging.
 Full rebuild clean (8 pages, only cosmetic underfull-hbox warnings, no
 overfull boxes, no undefined citations). \texttt{make\_arxiv\_submission.sh}
 re-run against the final text; clean.
+
+### Update, 2026-09-26 (same day, continued): two arithmetic errors
+caught by a reviewer, both verified and fixed at their source, not
+just patched in the paper
+
+A reviewer checked two multiplier claims by hand and found both
+inconsistent with the numbers next to them: ``$1.06\times$ speedup
+(37.14\,ms)'' following ``42.98\,ms,'' and ``$1158\times$ speedup...
+(19.4\,ms $\to$ 0.017\,ms).'' Verified both independently before
+touching anything:
+
+- $42.98/37.14 = 1.1573\ldots \approx 1.16\times$, not $1.06\times$.
+  Unambiguous -- a straightforward one-digit error (1.06 vs.\ 1.16 is
+  exactly the kind of transposition a human or a tool copying numbers
+  by hand would make), not a case where the underlying data could
+  reasonably be read a different way.
+- $19.4/0.017 = 1141.2\ldots \approx 1141\times$, not $1158\times$.
+  Less immediately certain, because 0.017\,ms is rounded to three
+  decimal places and a large multiplier is sensitive to exactly how
+  the unrounded value rounds -- so checked whether $1158\times$ might
+  be correct at full precision before assuming it was simply wrong.
+
+**Both numbers turned out to be old, not new**: grepped
+\texttt{STATUS.md}'s own git history (\texttt{git log --all -p --
+STATUS.md}) for every prior appearance of either figure. Both
+``1.06x'' and ``1158x'' were already present, unchanged, in this
+project's very first latency-optimization table -- meaning these have
+been wrong (or at least unverified against their own displayed inputs)
+since early in the project, and survived every subsequent audit round,
+including the several specifically about this exact latency section,
+uncaught. No higher-precision raw values were ever recorded alongside
+either figure in any commit.
+
+Attempted to resolve $1158\times$ properly rather than just algebra
+the label to match the display: checked whether the original slow
+code path (\texttt{pp.create\_measurement()} looped per channel) still
+exists anywhere runnable, to re-time the comparison fresh at full
+precision. It doesn't -- \texttt{24\_realtime\_latency\_benchmark\_
+OPTIMIZED.py} only documents the old approach in a comment; the slow
+code itself was replaced, not kept alongside, when the fix was made.
+Reconstructing it well enough to re-measure meaningfully would be a
+real, open-ended side investigation, not a quick check, and the author
+has a same-day submission target. Given no more precise raw data
+exists anywhere in history and reconstructing it is out of proportion
+to the fix needed, made the responsible, zero-new-risk choice instead:
+correct each multiplier to exactly match its own already-displayed,
+already-cited inputs (which is true by construction, at any precision
+those inputs actually have) rather than assert a precision this
+project cannot currently back up.
+
+Fixed in \texttt{paper/main.tex} (both occurrences) and in
+\texttt{STATUS.md}'s own original reference table (\S3, the very table
+these figures were first computed in) -- corrected the erroneous
+multiplier cells in place, since they are factual/computational
+content, not narrative; left the surrounding historical narrative text
+(a separate, later \texttt{STATUS.md} update that quotes ``1158x'' as
+what the paper said \emph{at that point in the project's history})
+untouched, since that mention is accurately describing a past state,
+not asserting a current fact. Swept both files for any other
+occurrence of either multiplier; none found.
+
+Also applied, in the same commit, a direct author request unrelated to
+either number: changed the author block's affiliation line from
+``Department of Electrical Engineering and Information Technology''
+to ``M.Sc. Student, Electrical Engineering and Information
+Technology'' -- the author's own explicit, pasted text, a legitimate
+and common convention (stating academic status rather than department
+name in that slot), not a reversion of the earlier, structurally
+different affiliation-format fix from much earlier in this project
+(that one had a bare degree title standing in for an affiliation name
+with no ``Student'' framing at all; this one explicitly states status).
+
+Full rebuild clean, still 8 pages. \texttt{make\_arxiv\_submission.sh}
+re-run; clean.
 
 ## Positioning against related work
 

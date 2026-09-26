@@ -19,7 +19,7 @@
 \author{
 \IEEEauthorblockN{Yagiz Sarapli}
 \IEEEauthorblockA{
-Department of Electrical Engineering and Information Technology\\
+M.Sc. Student, Electrical Engineering and Information Technology\\
 TU Dortmund University\\
 Dortmund, Germany\\
 yagiz.sarapli@tu-dortmund.de}
@@ -154,13 +154,13 @@ Following \cite{abukhousa2026latency}, we measure the full per-cycle decision pi
 Median 42.98\,ms, $2.15\times$ the 20\,ms reference, using the original pipeline (RandomForest classifier, \texttt{tolerance=1e-7}, \texttt{maximum\_iterations=40}, flat state-estimator initialization every cycle).
 
 \subsection{Warm-Start Test}
-Warm-starting the state estimator from the previous cycle's converged solution produced only a $1.06\times$ speedup (37.14\,ms), ruling out ``far from the solution'' as the dominant cost.
+Warm-starting the state estimator from the previous cycle's converged solution produced only a $1.16\times$ speedup (37.14\,ms), ruling out ``far from the solution'' as the dominant cost.
 
 \subsection{Profiling}
 Splitting the state-estimation call into its constituent steps showed the measurement-submission step cost 19.9\,ms -- essentially the same as the estimator's own solve (19.4\,ms). An ablation on \texttt{maximum\_iterations} (40 $\rightarrow$ 5: no speed change; 40 $\rightarrow$ 3: convergence failure in 19/20 trials) showed the true iteration requirement is roughly 4--5 steps regardless of the 40-iteration cap, ruling out iteration count as the estimator-side cost driver.
 
 \subsection{Measurement-Update Optimization}
-The measurement table was being rebuilt from scratch every cycle via a general-purpose element-creation API, called once per channel in a Python loop -- even though the table's structure is identical every cycle; only the values change. Replacing this with a one-time table construction followed by an in-place overwrite of the value column each cycle gave a $1158\times$ speedup on this sub-step (19.4\,ms $\rightarrow$ 0.017\,ms), verified to produce a bit-identical state-estimation result (max difference 0.0).
+The measurement table was being rebuilt from scratch every cycle via a general-purpose element-creation API, called once per channel in a Python loop -- even though the table's structure is identical every cycle; only the values change. Replacing this with a one-time table construction followed by an in-place overwrite of the value column each cycle gave a $1141\times$ speedup on this sub-step (19.4\,ms $\rightarrow$ 0.017\,ms), verified to produce a bit-identical state-estimation result (max difference 0.0).
 
 \begin{figure}[t]
 \centering
